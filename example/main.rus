@@ -1,0 +1,17 @@
+type NewsArticle = {
+    content: String,
+}
+
+impl String for NewsArticle {
+    fn string(self: Self): Number {
+        self.content
+    },
+}
+
+console.log(""+NewsArticle({ content: "BREAKING NEWS!"})); // -> "BREAKING NEWS!"
+
+
+match result {
+    Option.Some(val) => console.log(val),
+    Option.None => console.log("none"),
+};

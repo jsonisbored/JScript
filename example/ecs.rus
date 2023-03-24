@@ -1,0 +1,17 @@
+#[derive(Component)]
+type Person;
+
+#[derive(Component)]
+type Name = String;
+
+
+
+function add_people(mut commands: Commands) {
+    commands.spawn((Person, Name("Elaina Proctor")));
+    commands.spawn((Person, Name("Renzo Hume")));
+    commands.spawn((Person, Name("Zayna Nieves")));
+}
+
+World::new()
+    .add_startup_system(add_people)
+    .run();
