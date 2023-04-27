@@ -56,7 +56,7 @@ export enum TokenKind {
 
     As              = "As",
 
-    Identifier      = "Identifier",
+    Ident           = "Ident",
     String          = "String",
     Number          = "Number",
 
@@ -78,10 +78,11 @@ export enum TokenKind {
     Const           = "Const",
 
     Enum            = "Enum",
-    Function        = "Function",
+    Fn              = "Fn",
     Impl            = "Impl",
     Trait           = "Trait",
     Struct          = "Struct",
+    Type            = "Type",
 
     Import          = "Import",
     Export          = "Export",

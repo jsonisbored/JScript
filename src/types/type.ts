@@ -4,7 +4,7 @@ export enum TypeKind {
     Number      = "Number",
     Object      = "Object",
     Array       = "Array",
-    Identifier  = "Identifier",
+    Ident       = "Ident",
     Any         = "Any",
 }
 export interface Boolean {
@@ -28,7 +28,7 @@ export interface Array {
     value: unknown[];
 }
 export interface Identifier {
-    kind: TypeKind.Identifier;
+    kind: TypeKind.Ident;
     value: string;
 }
 export interface Any {

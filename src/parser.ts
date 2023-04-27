@@ -8,7 +8,7 @@ import {
     BlockExpr,
     ConstStmt,
     EnumStmt,
-    FunctionStmt,
+    FnStmt,
     ImplStmt,
     Stmt,
     StructStmt,
@@ -32,16 +32,18 @@ import {
     BreakStmt,
     ContinueStmt,
     ReturnStmt,
-    ExprStmt,
+    ExprStmt, 
     AssignStmt,
 
     AST,
+    Span,
 } from "./types/mod.ts";
 
 
 export class Parser {
     private readonly tokens: Token[];
     private readonly errors: Error[] = [];
+    private start = 0;
     private current = 0;
 
     private readonly interfaces = new Set<Token>();
@@ -76,19 +78,30 @@ export class Parser {
     }
 
     private decl_stmt(): Result<Stmt> {
-        if (this.match(TokenKind.Const)) return this.const_decl();
-        if (this.match(TokenKind.Function)) return this.function_decl();
-        if (this.match(TokenKind.Enum)) return this.enum_decl();
-        if (this.match(TokenKind.Struct)) return this.type_decl();
-        if (this.match(TokenKind.Impl)) return this.impl_decl();
-        if (this.match(TokenKind.Trait)) return this.trait_decl();
-        if (this.match(TokenKind.Let)) return this.let_decl();
+        let stmt: Result<Stmt> = this.const_decl();
+        if (!isError(stmt)) return stmt;
+        stmt = this.fn_decl();
+        if (!isError(stmt)) return stmt;
+        stmt = this.enum_decl();
+        if (!isError(stmt)) return stmt;
+        stmt = this.type_decl();
+        if (!isError(stmt)) return stmt;
+        stmt = this.impl_decl();
+        if (!isError(stmt)) return stmt;
+        stmt = this.trait_decl();
+        if (!isError(stmt)) return stmt;
+        stmt = this.let_decl();
+        if (!isError(stmt)) return stmt;
         
         return this.any_stmt();
     }
 
     private const_decl(): Result<ConstStmt> {
-        const name = this.consume(TokenKind.Identifier);
+        if (!this.match(TokenKind.Const)) {
+            return this.error(TokenKind.Const);
+        }
+
+        const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
         const type = this.match(TokenKind.Colon)
@@ -109,30 +122,38 @@ export class Parser {
         const semi = this.consume(TokenKind.Semicolon);
         if (isError(semi)) return semi;
 
-        return {
+        return this.node({
             name,
             kind: StmtKind.Const,
             type,
             init,
-        };
+        });
     }
 
-    private function_decl(): Result<FunctionStmt> {
+    private fn_decl(): Result<FnStmt> {
+        if (!this.match(TokenKind.Fn)) {
+            return this.error(TokenKind.Fn);
+        }
+
         const type = this.function_type();
         if (isError(type)) return type;
 
         const block = this.block_expr();
         if (isError(block)) return block;
 
-        return {
-            kind: StmtKind.Function,
+        return this.node({
+            kind: StmtKind.Fn,
             type,
             block,
-        };
+        });
     }
 
     private enum_decl(): Result<EnumStmt> {
-        const name = this.consume(TokenKind.Identifier);
+        if (!this.match(TokenKind.Enum)) {
+            return this.error(TokenKind.Enum);
+        }
+
+        const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
         if (!this.match(TokenKind.LeftCurlyBrace)) {
@@ -141,7 +162,7 @@ export class Parser {
 
         const fields: EnumStmt["fields"] = [];
         while (!this.check(TokenKind.RightCurlyBrace)) {
-            const name = this.consume(TokenKind.Identifier);
+            const name = this.consume(TokenKind.Ident);
             if (isError(name)) return name;
 
             const types: Type[] = [];
@@ -158,15 +179,19 @@ export class Parser {
             fields.push({ name, types });
         }
 
-        return {
+        return this.node({
             kind: StmtKind.Enum,
             name,
             fields,
-        };
+        });
     }
 
     private type_decl(): Result<StructStmt> {
-        const name = this.consume(TokenKind.Identifier);
+        if (!this.match(TokenKind.Type)) {
+            return this.error(TokenKind.Type);
+        }
+        
+        const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
         this.interfaces.add(name);
@@ -177,7 +202,7 @@ export class Parser {
 
         const fields: StructStmt["fields"] = [];
         while (!this.check(TokenKind.RightCurlyBrace)) {
-            const name = this.consume(TokenKind.Identifier);
+            const name = this.consume(TokenKind.Ident);
             if (isError(name)) return name;
 
             if (!this.match(TokenKind.Colon)) {
@@ -194,19 +219,23 @@ export class Parser {
             fields.push({ name, type });
         }
 
-        return {
+        return this.node({
             kind: StmtKind.Struct,
             name,
             fields,
-        };
+        });
     }
 
     private impl_decl(): Result<ImplStmt> {
-        const impl_name = this.consume(TokenKind.Identifier);
+        if (!this.match(TokenKind.Impl)) {
+            return this.error(TokenKind.Impl);
+        }
+        
+        const impl_name = this.consume(TokenKind.Ident);
         if (isError(impl_name)) return impl_name;
         
         const for_name = this.match(TokenKind.For)
-            ? this.consume(TokenKind.Identifier)
+            ? this.consume(TokenKind.Ident)
             : undefined;
         if (isError(for_name)) return for_name;
         
@@ -216,22 +245,26 @@ export class Parser {
 
         const methods: ImplStmt["methods"] = [];
         while (!this.match(TokenKind.RightCurlyBrace)) {
-            const decl = this.function_decl();
+            const decl = this.fn_decl();
             if (isError(decl)) return decl;
 
             methods.push(decl);
         }
 
-        return {
+        return this.node({
             kind: StmtKind.Impl,
             impl_name,
             for_name,
             methods,
-        };
+        });
     }
 
     private trait_decl(): Result<TraitStmt> {
-        const name = this.consume(TokenKind.Identifier);
+        if (!this.match(TokenKind.Trait)) {
+            return this.error(TokenKind.Trait);
+        }
+        
+        const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
         
         if (!this.match(TokenKind.LeftCurlyBrace)) {
@@ -249,17 +282,21 @@ export class Parser {
             methods.push({ type, block });
         }
 
-        return {
+        return this.node({
             kind: StmtKind.Trait,
             name,
             methods,
-        };
+        });
     }
 
     private let_decl(): Result<LetStmt> {
+        if (!this.match(TokenKind.Let)) {
+            return this.error(TokenKind.Let);
+        }
+        
         const mut = this.match(TokenKind.Mut);
 
-        const name = this.consume(TokenKind.Identifier);
+        const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
         const type = this.match(TokenKind.Colon)
@@ -281,23 +318,28 @@ export class Parser {
             return this.error(TokenKind.Semicolon);
         }
 
-        return {
+        return this.node({
             kind: StmtKind.Let,
             mut,
             name,
             type,
             init,
-        }
+        });
     }
 
 
 
     private any_stmt(): Result<Stmt> {
-        if (this.match(TokenKind.While)) return this.while_stmt();
-        if (this.match(TokenKind.For)) return this.for_stmt();
-        if (this.match(TokenKind.Break)) return this.break_stmt();
-        if (this.match(TokenKind.Continue)) return this.continue_stmt();
-        if (this.match(TokenKind.Return)) return this.return_stmt();
+        let stmt: Result<Stmt> = this.while_stmt();
+        if (!isError(stmt)) return stmt;
+        stmt = this.for_stmt();
+        if (!isError(stmt)) return stmt;
+        stmt = this.break_stmt();
+        if (!isError(stmt)) return stmt;
+        stmt = this.continue_stmt();
+        if (!isError(stmt)) return stmt;
+        stmt = this.return_stmt();
+        if (!isError(stmt)) return stmt;
 
         const expr_stmt = this.expr_stmt();
         if (!isError(expr_stmt)) return expr_stmt;
@@ -306,21 +348,29 @@ export class Parser {
     }
 
     private while_stmt(): Result<WhileStmt> {
+        if (!this.match(TokenKind.While)) {
+            return this.error(TokenKind.While);
+        }
+        
         const condition = this.any_expr();
         if (isError(condition)) return condition;
 
         const block = this.block_expr();
         if (isError(block)) return block;
 
-        return {
+        return this.node({
             kind: StmtKind.While,
             condition,
             block,
-        };
+        });
     }
 
     private for_stmt(): Result<ForStmt> {
-        const name = this.consume(TokenKind.Identifier);
+        if (!this.match(TokenKind.For)) {
+            return this.error(TokenKind.For);
+        }
+        
+        const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
         if (!this.match(TokenKind.In)) return this.error(TokenKind.In);
@@ -331,35 +381,47 @@ export class Parser {
         const block = this.block_expr();
         if (isError(block)) return block;
 
-        return {
+        return this.node({
             kind: StmtKind.For,
             name,
             iter,
             block,
-        };
+        });
     }
     
     private break_stmt(): Result<BreakStmt> {
+        if (!this.match(TokenKind.Break)) {
+            return this.error(TokenKind.Break);
+        }
+        
         if (!this.match(TokenKind.Semicolon)) {
             return this.error(TokenKind.Semicolon);
         }
 
-        return {
+        return this.node({
             kind: StmtKind.Break,
-        };
+        });
     }
 
     private continue_stmt(): Result<ContinueStmt> {
+        if (!this.match(TokenKind.Continue)) {
+            return this.error(TokenKind.Continue);
+        }
+        
         if (!this.match(TokenKind.Semicolon)) {
             return this.error(TokenKind.Semicolon);
         }
 
-        return {
+        return this.node({
             kind: StmtKind.Continue,
-        };
+        });
     }
 
     private return_stmt(): Result<ReturnStmt> {
+        if (!this.match(TokenKind.Return)) {
+            return this.error(TokenKind.Return);
+        }
+        
         const expr = this.match(TokenKind.Semicolon)
                 ? undefined
                 : this.any_expr();
@@ -369,10 +431,10 @@ export class Parser {
             return this.error(TokenKind.Semicolon);
         }
 
-        return {
+        return this.node({
             kind: StmtKind.Return,
             expr,
-        };
+        });
     }
 
     private assign_stmt(): Result<AssignStmt> {
@@ -395,7 +457,7 @@ export class Parser {
             if (isError(value)) return value;
 
             if (
-                expr.kind === ExprKind.Identifier ||
+                expr.kind === ExprKind.Ident ||
                 expr.kind === ExprKind.GetField || 
                 expr.kind === ExprKind.GetIndex 
             ) {
@@ -404,6 +466,10 @@ export class Parser {
                     expr: expr,
                     operator,
                     value,
+                    span: {
+                        start: expr.span.start,
+                        end: this.tokens[this.current-1].span.end,
+                    },
                 };
             } else {
                 return {
@@ -432,13 +498,17 @@ export class Parser {
         return {
             kind: StmtKind.Expr,
             expr,
+            span: {
+                start: expr.span.start,
+                end: this.tokens[this.current-1].span.end,
+            },
         };
     }
 
 
 
     private function_type(): Result<FunctionType> {
-        const name = this.consume(TokenKind.Identifier);
+        const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
         if (!this.match(TokenKind.LeftParen)) {
@@ -453,7 +523,7 @@ export class Parser {
             
             const mut = this.match(TokenKind.Mut);
 
-            const name = this.consume(TokenKind.Identifier);
+            const name = this.consume(TokenKind.Ident);
             if (isError(name)) return name;
 
             if (!this.match(TokenKind.Colon)) {
@@ -476,7 +546,7 @@ export class Parser {
 
         const return_type = this.match(TokenKind.Colon)
             ? this.consume_type()
-            : undefined;
+            : null;
 
         if (isError(return_type)) return return_type;
 
@@ -484,6 +554,10 @@ export class Parser {
             name,
             params,
             return_type,
+            span: {
+                start: name.span.start,
+                end: this.tokens[this.current-1].span.end,
+            },
         };
     }
 
@@ -493,7 +567,7 @@ export class Parser {
         if (this.match(TokenKind.Str)) return { kind: TypeKind.String, value: <string>t.value }
         if (this.match(TokenKind.Bool)) return { kind: TypeKind.Boolean, value: <boolean>!!t.value }
         if (this.match(TokenKind.Any)) return { kind: TypeKind.Any, value: <string>t.value }
-        if (this.match(TokenKind.Identifier)) return { kind: TypeKind.Identifier, value: <string>t.value }
+        if (this.match(TokenKind.Ident)) return { kind: TypeKind.Ident, value: <string>t.value }
 
         return {
             origin: ErrorOrigin.Parser,
@@ -531,10 +605,10 @@ export class Parser {
             return this.error(TokenKind.RightCurlyBrace);
         }
         
-        return {
+        return this.node({
             kind: ExprKind.Block,
             stmts,
-        };
+        });
     }
 
     private if_expr(): Result<IfExpr> {
@@ -547,7 +621,7 @@ export class Parser {
 
         if (
             condition.kind !== ExprKind.Boolean &&
-            condition.kind !== ExprKind.Identifier &&
+            condition.kind !== ExprKind.Ident &&
             condition.kind !== ExprKind.Call &&
             condition.kind !== ExprKind.Block &&
             condition.kind !== ExprKind.GetField &&
@@ -574,12 +648,12 @@ export class Parser {
         if (isError(else_stmt)) return else_stmt;
 
 
-        return {
+        return this.node({
             kind: ExprKind.If,
             condition,
             then: then_stmt,
             else: else_stmt,
-        };
+        });
     }
 
     private operation_expr(precedence = 0): Result<Expr> {
@@ -591,7 +665,7 @@ export class Parser {
                 0: TokenKind.LogicOr,
                 1: TokenKind.LogicAnd,
                 2: TokenKind.BitwiseXor,
-                3: TokenKind.BitwiseXor,
+                3: TokenKind.BitwiseOr,
                 4: TokenKind.BitwiseAnd,
                 5: [TokenKind.BangEqual, TokenKind.EqualEqual],
                 6: [TokenKind.Greater, TokenKind.GreaterEqual, TokenKind.Less, TokenKind.LessEqual],
@@ -605,12 +679,12 @@ export class Parser {
                 const right = this.operation_expr(precedence+1);
                 if (isError(right)) return right;
 
-                expr = {
+                expr = this.node({
                     kind: ExprKind.Binary,
                     left: expr,
                     operator,
                     right,
-                };
+                });
             }
 
             return expr;
@@ -638,11 +712,11 @@ export class Parser {
                 const expr = this.operation_expr(precedence+1);
                 if (isError(expr)) return expr;
 
-                return {
+                return this.node({
                     kind: ExprKind.Unary,
                     operator,
                     expr,
-                };
+                });
             }
 
             return this.operation_expr(precedence+1);
@@ -667,11 +741,11 @@ export class Parser {
 
                 if (isError(expr)) return expr;
 
-                return {
+                return this.node({
                     kind: ExprKind.Call,
                     func: expr,
                     args,
-                };
+                });
             }
 
             return expr;
@@ -686,11 +760,11 @@ export class Parser {
 
                     if (!this.match(TokenKind.RightBracket)) return this.error(TokenKind.RightBracket);
                     
-                    expr = {
+                    expr = this.node({
                         kind: ExprKind.GetIndex,
                         expr,
                         index,
-                    }
+                    });
                 }
                     
                 return expr;
@@ -698,14 +772,14 @@ export class Parser {
 
             if (this.check(TokenKind.Dot)) {
                 while (this.match(TokenKind.Dot)) {
-                    const field = this.consume(TokenKind.Identifier);
+                    const field = this.consume(TokenKind.Ident);
                     if (isError(field)) return field;
                     
-                    expr = {
+                    expr = this.node({
                         kind: ExprKind.GetField,
                         expr,
                         field,
-                    }
+                    });
                 }
                     
                 return expr;
@@ -739,7 +813,7 @@ export class Parser {
 
             return expr;
         } else if (precedence === 17) { // @TODO Macro call. Initial thought (macro!(ast) => template) or (macro!(tokens) => tokens)
-            if (this.check(TokenKind.Identifier)) {}
+            if (this.check(TokenKind.Ident)) {}
 
             return this.operation_expr(precedence+1);
         } else {
@@ -749,11 +823,11 @@ export class Parser {
 
     private scalar_expr(): Result<Expr> {
         const t = this.tokens[this.current];
-        if (this.match(TokenKind.False)) return { kind: ExprKind.Boolean, value: false };
-        if (this.match(TokenKind.True)) return { kind: ExprKind.Boolean, value: true };
-        if (this.match(TokenKind.Number)) return { kind: ExprKind.Number, value: <number><unknown>t.value };
-        if (this.match(TokenKind.String)) return { kind: ExprKind.String, value: <string>t.value };
-        if (this.match(TokenKind.Identifier)) return { kind: ExprKind.Identifier, ident: t };
+        if (this.match(TokenKind.False)) return this.node({ kind: ExprKind.Boolean, value: false });
+        if (this.match(TokenKind.True)) return this.node({ kind: ExprKind.Boolean, value: true });
+        if (this.match(TokenKind.Number)) return this.node({ kind: ExprKind.Number, value: <number><unknown>t.value });
+        if (this.match(TokenKind.String)) return this.node({ kind: ExprKind.String, value: <string>t.value });
+        if (this.match(TokenKind.Ident)) return this.node({ kind: ExprKind.Ident, ident: t });
 
         return {
             origin: ErrorOrigin.Parser,
@@ -797,5 +871,19 @@ export class Parser {
         this.current ++;
 
         return t;
+    }
+
+    private node<T>(node: T):  & { span: Span } & T { 
+        const out = {
+            ...node,
+            span: {
+                start: this.tokens[this.start].span.start,
+                end: this.tokens[this.current-1].span.end,
+            },
+        };
+
+        this.start = this.current;
+
+        return out;
     }
 }

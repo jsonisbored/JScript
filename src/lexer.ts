@@ -10,8 +10,8 @@ export class Lexer {
         current: number,
         message: string,
     }[] = [];
-    private start = 0;
-    private current = 0;
+    private current = -1;
+    private start = -1;
     private readonly chars: string[];
 
 
@@ -28,7 +28,7 @@ export class Lexer {
         "const": TokenKind.Const,
         "enum": TokenKind.Enum,
         "struct": TokenKind.Struct,
-        "function": TokenKind.Function,
+        "fn": TokenKind.Fn,
         "impl": TokenKind.Impl,
         "trait": TokenKind.Trait,
         "import": TokenKind.Import,
@@ -38,6 +38,7 @@ export class Lexer {
         "break": TokenKind.Break,
         "false": TokenKind.False,
         "true": TokenKind.True,
+        "type": TokenKind.Type,
     };
 
 
@@ -56,6 +57,7 @@ export class Lexer {
         while (this.current < this.chars.length-1) { // Check for end of string
             const c = this.advance() as string; // Is safe
             this.start = this.current;
+            console.log(c);
             
 
             if (c === ':') {
@@ -204,7 +206,7 @@ export class Lexer {
                 while (this.is_alphanumeric(this.chars[this.current+1])) {
                     ident += this.advance();
                 }
-                const type = Lexer.keywords[ident] ?? TokenKind.Identifier;
+                const type = Lexer.keywords[ident] ?? TokenKind.Ident;
                 this.addToken(type, ident);
             } else if (!" \n\r".split("").includes(c)) {
                 this.errors.push();

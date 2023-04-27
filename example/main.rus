@@ -3,12 +3,12 @@ type NewsArticle = {
 }
 
 impl String for NewsArticle {
-    fn string(self: Self): Number {
+    fn to_string(self: NewsArticle): Number {
         self.content
     },
 }
 
-console.log(""+NewsArticle({ content: "BREAKING NEWS!"})); // -> "BREAKING NEWS!"
+console.log("" + NewsArticle({ content: "BREAKING NEWS!"}).to_string()); // -> "BREAKING NEWS!"
 
 
 match result {

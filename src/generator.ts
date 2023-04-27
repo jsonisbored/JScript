@@ -54,7 +54,7 @@ export class Generator {
             output += `for (const ${stmt.name} of ${stmt.iter}) ${
                 this.expr(stmt.block)
             }`;
-        } else if (stmt.kind === StmtKind.Function) {
+        } else if (stmt.kind === StmtKind.Fn) {
             output += `function ${stmt.type.name.value}(${
                 stmt.type.params.map(param => param.name.value).join(", ")
             }) ${
@@ -72,7 +72,7 @@ export class Generator {
             output += `${this.expr(expr.func)}(${
                 expr.args.map(a => this.expr(a)).join(", ")
             })`;
-        } else if (expr.kind === ExprKind.Identifier) {
+        } else if (expr.kind === ExprKind.Ident) {
             output += expr.ident.value;
         } else if (expr.kind === ExprKind.String) {
             output += `"${expr.value}"`;

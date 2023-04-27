@@ -1,7 +1,9 @@
 import {
     Token,
     Type,
+    TypeKind,
     Stmt,
+    Span,
 } from "./mod.ts";
 
 
@@ -10,7 +12,7 @@ export enum ExprKind {
     Number          = "Number",
     String          = "String",
     Call            = "Call",
-    CallInterface   = "CallInterfaceExpr",
+    CallStruct      = "CallStruct",
     GetField        = "GetProp",
     GetIndex        = "GetIndex",
     Lambda          = "Lambda",
@@ -18,10 +20,8 @@ export enum ExprKind {
     Binary          = "Binary",
     TypeCast        = "TypeCast",
     Group           = "Group",
-    Let             = "Let",
-    Assign          = "Assign",
     Match           = "Match",
-    Identifier      = "Identifier",
+    Ident           = "Ident",
     Block           = "Block",
     If              = "If",
     Macro           = "Macro",
@@ -30,102 +30,121 @@ export enum ExprKind {
 export interface BooleanExpr {
     kind: ExprKind.Boolean;
     value: boolean;
+    span: Span;
 }
 export interface NumberExpr {
     kind: ExprKind.Number;
     value: number;
+    span: Span;
 }
 export interface StringExpr {
     kind: ExprKind.String;
     value: string;
+    span: Span;
 }
 export interface CallExpr {
     kind: ExprKind.Call;
     func: Expr;
     args: Expr[];
+    span: Span;
 }
 export interface CallInterfaceExpr {
-    kind: ExprKind.CallInterface;
+    kind: ExprKind.CallStruct;
     interface: Expr;
     args: {
         name: Token;
         type: Type;
     }[];
+    span: Span;
 }
 export interface GetFieldExpr {
     kind: ExprKind.GetField;
     expr: Expr;
     field: Token;
+    span: Span;
 }
 export interface GetIndexExpr {
     kind: ExprKind.GetIndex;
     expr: Expr;
     index: Expr;
+    span: Span;
 }
 export type Param = {
     name: Token;
     type: Type;
+    span: Span;
 }
 export interface LambdaExpr {
     kind: ExprKind.Lambda;
     params: Param[];
     return_type: Type;
     block: BlockExpr;
+    span: Span;
 }
 export interface UnaryExpr {
     kind: ExprKind.Unary;
     operator: Token;
     expr: Expr;
+    span: Span;
 }
 export interface BinaryExpr {
     kind: ExprKind.Binary;
     left: Expr;
     operator: Token;
     right: Expr;
+    span: Span;
 }
 export interface TypeCastExpr {
     kind: ExprKind.TypeCast;
     expr: Expr;
-    type: Type;
+    type: TypeKind;
+    span: Span;
 }
 export interface GroupExpr {
     kind: ExprKind.Group;
     expr: Expr;
+    span: Span;
 }
 export interface MatchArm {
     expr: Expr;
     body: Expr;
+    span: Span;
 }
 export interface MatchExpr {
     kind: ExprKind.Match;
     expr: Expr;
     arms: MatchArm[];
     default?: Expr;
+    span: Span;
 }
-export interface IdentifierExpr {
-    kind: ExprKind.Identifier,
-    ident: Token,
+export interface IdentExpr {
+    kind: ExprKind.Ident;
+    ident: Token;
+    span: Span;
 }
 export interface BlockExpr {
     kind: ExprKind.Block;
     stmts: Stmt[];
+    span: Span;
 }
 export interface IfExpr {
     kind: ExprKind.If;
     condition: FalsyExpr;
     then: BlockExpr;
     else?: IfExpr | BlockExpr;
+    span: Span;
 }
 export interface MacroExpr {
     kind: ExprKind.Macro;
     name: Token;
     expr: Expr;
+    span: Span;
 }
 
 
 export type FalsyExpr =
     | BooleanExpr
-    | IdentifierExpr
+    | IdentExpr
     | CallExpr
     | BlockExpr
     | GetFieldExpr
@@ -148,7 +167,7 @@ export type Expr =
     | TypeCastExpr
     | GroupExpr
     | MatchExpr
-    | IdentifierExpr
+    | IdentExpr
     | BlockExpr
     | IfExpr
     | MacroExpr;

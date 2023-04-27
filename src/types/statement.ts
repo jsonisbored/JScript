@@ -3,9 +3,10 @@ import {
     Type,
     Expr,
     BlockExpr,
-    IdentifierExpr,
+    IdentExpr,
     GetFieldExpr,
     GetIndexExpr,
+    Span,
 } from "./mod.ts";
 
 
@@ -18,7 +19,7 @@ export enum StmtKind {
     For         = "For",
     Let         = "Let",
     Const       = "Const",
-    Function    = "Function",
+    Fn          = "Fn",
     Enum        = "Enum",
     Struct      = "Struct",
     Impl        = "Impl",
@@ -28,51 +29,61 @@ export enum StmtKind {
 
 export interface BreakStmt {
     kind: StmtKind.Break;
+    span: Span;
 }
 export interface ContinueStmt {
     kind: StmtKind.Continue;
+    span: Span;
 }
 export interface ExprStmt {
     kind: StmtKind.Expr;
     expr: Expr;
+    span: Span;
 }
 export interface ReturnStmt {
     kind: StmtKind.Return;
     expr?: Expr;
+    span: Span;
 }
 export interface WhileStmt {
     kind: StmtKind.While;
     condition: Expr;
     block: BlockExpr;
+    span: Span;
 }
 export interface ForStmt {
     kind: StmtKind.For;
     name: Token;
     iter: Expr;
     block: BlockExpr;
+    span: Span;
 }
 export interface LetStmt {
     kind: StmtKind.Let;
     name: Token;
-    init: Expr;
     type: Type;
+    init: Expr;
     mut: boolean;
+    span: Span;
 }
 export interface ConstStmt {
     kind: StmtKind.Const;
     name: Token;
     init: Expr;
     type: Type;
+    span: Span;
 }
 export interface FunctionType {
     name: Token;
     params: { name: Token, type: Type, mut: boolean }[];
-    return_type?: Type;
+    return_type: Type | null;
+    span: Span;
 }
-export interface FunctionStmt {
-    kind: StmtKind.Function;
+export interface FnStmt {
+    kind: StmtKind.Fn;
     type: FunctionType;
     block: BlockExpr;
+    span: Span;
 }
 export interface EnumStmt {
     kind: StmtKind.Enum;
@@ -81,6 +92,7 @@ export interface EnumStmt {
         name: Token;
         types: Type[];
     }[];
+    span: Span;
 }
 export interface StructStmt {
     kind: StmtKind.Struct;
@@ -89,12 +101,14 @@ export interface StructStmt {
         name: Token;
         type: Type;
     }[];
+    span: Span;
 }
 export interface ImplStmt {
     kind: StmtKind.Impl;
     impl_name: Token;
     for_name?: Token;
-    methods: FunctionStmt[];
+    methods: FnStmt[];
+    span: Span;
 }
 export interface TraitStmt {
     kind: StmtKind.Trait;
@@ -103,13 +117,25 @@ export interface TraitStmt {
         type: FunctionType;
         block?: BlockExpr;
     }[];
+    span: Span;
 }
 export interface AssignStmt {
     kind: StmtKind.Assign;
-    expr: GetFieldExpr | GetIndexExpr | IdentifierExpr;
+    expr: GetFieldExpr | GetIndexExpr | IdentExpr;
     operator: Token,
     value: Expr;
+    span: Span;
 }
+
+
+export type DeclStmt =
+    | LetStmt
+    | ConstStmt
+    | FnStmt
+    | EnumStmt
+    | StructStmt
+    | ImplStmt
+    | TraitStmt;
 
 export type Stmt =
     | BreakStmt
@@ -120,7 +146,7 @@ export type Stmt =
     | ForStmt
     | LetStmt
     | ConstStmt
-    | FunctionStmt
+    | FnStmt
     | EnumStmt
     | StructStmt
     | ImplStmt

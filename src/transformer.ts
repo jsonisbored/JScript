@@ -1,10 +1,11 @@
-// inline traits
-// javascript-like ast?
+// inline traits probably
+
+import { AST } from "./lib.ts";
 
 export class Transformer {
     constructor() {}
 
-    public transform() {
+    public transform(ast: AST) {
         
     }
 }

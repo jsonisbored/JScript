@@ -12,20 +12,19 @@ const a = 0;   // Constant variable, constant value
 
 or probably just match js
 
-let a = 0;     // Mutable variable,  mutable value
+let a = 0;     // Mutable variable,  mutable valueF
 const a = 0;   // Constant variable, mutable value
 
 */
-
 
 const input = await Deno.readTextFile("./example/main.rus");
 
 const { tokens } = new Lexer(input).tokenizer();
 
+console.log(tokens);
 const { ast, errors: _errors } = new Parser(tokens).parse();
 // console.dir(ast, { depth: 10, });
 // console.log(_errors);
 
 const js = new Generator(ast).generate();
 console.log(js);
-
