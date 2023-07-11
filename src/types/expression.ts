@@ -21,6 +21,7 @@ export enum ExprKind {
     TypeCast        = "TypeCast",
     Group           = "Group",
     Match           = "Match",
+    Switch          = "Switch",
     Ident           = "Ident",
     Block           = "Block",
     If              = "If",
@@ -28,117 +29,128 @@ export enum ExprKind {
 }
 
 export interface BooleanExpr {
-    kind: ExprKind.Boolean;
-    value: boolean;
-    span: Span;
+    kind: ExprKind.Boolean,
+    value: boolean,
+    span: Span,
 }
 export interface NumberExpr {
-    kind: ExprKind.Number;
-    value: number;
-    span: Span;
+    kind: ExprKind.Number,
+    value: number,
+    span: Span,
 }
 export interface StringExpr {
-    kind: ExprKind.String;
-    value: string;
-    span: Span;
+    kind: ExprKind.String,
+    value: string,
+    span: Span,
 }
 export interface CallExpr {
-    kind: ExprKind.Call;
-    func: Expr;
-    args: Expr[];
-    span: Span;
+    kind: ExprKind.Call,
+    func: Expr,
+    args: Expr[],
+    span: Span,
 }
 export interface CallInterfaceExpr {
-    kind: ExprKind.CallStruct;
-    interface: Expr;
+    kind: ExprKind.CallStruct,
+    interface: Expr,
     args: {
-        name: Token;
-        type: Type;
-    }[];
-    span: Span;
+        name: Token,
+        type: Type,
+    }[],
+    span: Span,
 }
 export interface GetFieldExpr {
-    kind: ExprKind.GetField;
-    expr: Expr;
-    field: Token;
-    span: Span;
+    kind: ExprKind.GetField,
+    expr: Expr,
+    field: Token,
+    span: Span,
 }
 export interface GetIndexExpr {
-    kind: ExprKind.GetIndex;
-    expr: Expr;
-    index: Expr;
-    span: Span;
+    kind: ExprKind.GetIndex,
+    expr: Expr,
+    index: Expr,
+    span: Span,
 }
 export type Param = {
-    name: Token;
-    type: Type;
-    span: Span;
+    name: Token,
+    type: Type,
+    span: Span,
 }
 export interface LambdaExpr {
-    kind: ExprKind.Lambda;
-    params: Param[];
-    return_type: Type;
-    block: BlockExpr;
-    span: Span;
+    kind: ExprKind.Lambda,
+    params: Param[],
+    return_type: Type,
+    block: BlockExpr,
+    span: Span,
 }
 export interface UnaryExpr {
-    kind: ExprKind.Unary;
-    operator: Token;
-    expr: Expr;
-    span: Span;
+    kind: ExprKind.Unary,
+    operator: Token,
+    expr: Expr,
+    span: Span,
 }
 export interface BinaryExpr {
-    kind: ExprKind.Binary;
-    left: Expr;
-    operator: Token;
-    right: Expr;
-    span: Span;
+    kind: ExprKind.Binary,
+    left: Expr,
+    operator: Token,
+    right: Expr,
+    span: Span,
 }
 export interface TypeCastExpr {
-    kind: ExprKind.TypeCast;
-    expr: Expr;
-    type: TypeKind;
-    span: Span;
+    kind: ExprKind.TypeCast,
+    expr: Expr,
+    type: TypeKind,
+    span: Span,
 }
 export interface GroupExpr {
-    kind: ExprKind.Group;
-    expr: Expr;
-    span: Span;
+    kind: ExprKind.Group,
+    expr: Expr,
+    span: Span,
 }
 export interface MatchArm {
-    expr: Expr;
-    body: Expr;
-    span: Span;
+    expr: Expr,
+    body: Expr,
+    span: Span,
 }
 export interface MatchExpr {
-    kind: ExprKind.Match;
-    expr: Expr;
-    arms: MatchArm[];
-    default?: Expr;
-    span: Span;
+    kind: ExprKind.Match,
+    expr: Expr,
+    arms: MatchArm[],
+    default?: Expr,
+    span: Span,
+}
+export interface SwitchArm {
+    expr: Expr,
+    body: Stmt,
+    span: Span,
+}
+export interface SwitchExpr {
+    kind: ExprKind.Switch,
+    expr: Expr,
+    arms: SwitchArm[],
+    span: Span,
 }
 export interface IdentExpr {
-    kind: ExprKind.Ident;
-    ident: Token;
-    span: Span;
+    kind: ExprKind.Ident,
+    ident: Token,
+    span: Span,
 }
 export interface BlockExpr {
-    kind: ExprKind.Block;
-    stmts: Stmt[];
-    span: Span;
+    kind: ExprKind.Block,
+    stmts: Stmt[],
+    span: Span,
 }
 export interface IfExpr {
-    kind: ExprKind.If;
-    condition: FalsyExpr;
-    then: BlockExpr;
-    else?: IfExpr | BlockExpr;
-    span: Span;
+    kind: ExprKind.If,
+    condition: FalsyExpr,
+    then: BlockExpr,
+    else?: IfExpr | BlockExpr,
+    span: Span,
 }
 export interface MacroExpr {
-    kind: ExprKind.Macro;
-    name: Token;
-    expr: Expr;
-    span: Span;
+    kind: ExprKind.Macro,
+    name: Token,
+    expr: Expr,
+    span: Span,
 }
 
 
@@ -167,6 +179,7 @@ export type Expr =
     | TypeCastExpr
     | GroupExpr
     | MatchExpr
+    | SwitchExpr
     | IdentExpr
     | BlockExpr
     | IfExpr

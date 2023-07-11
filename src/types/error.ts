@@ -9,9 +9,10 @@ export enum ErrorOrigin {
 }
 
 export interface Error {
-    origin: ErrorOrigin;
-    kind: ErrorKind;
-    message: string;
+    origin: ErrorOrigin,
+    kind: ErrorKind,
+    message: string,
+    position: number,
 }
 export function isError<T>(t: T | Error): t is Error {
     if (

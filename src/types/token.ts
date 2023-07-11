@@ -16,8 +16,8 @@ export enum TokenKind {
 
     LeftParen       = "LeftParen",
     RightParen      = "RightParen",
-    LeftCurlyBrace  = "LeftCurlyBrace",
-    RightCurlyBrace = "RightCurlyBrace",
+    LeftBrace       = "LeftBrace",
+    RightBrace      = "RightBrace",
     LeftBracket     = "LeftBracket",
     RightBracket    = "RightBracket",
 
@@ -98,7 +98,7 @@ export enum TokenKind {
 }
 
 export interface Token {
-    kind: TokenKind;
-    value: string;
-    span: Span;
+    kind: TokenKind,
+    value: string,
+    span: Span,
 }

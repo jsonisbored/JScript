@@ -5,7 +5,6 @@ import {
     isError,
     ErrorOrigin,
     
-    BlockExpr,
     ConstStmt,
     EnumStmt,
     FnStmt,
@@ -14,6 +13,13 @@ import {
     StructStmt,
     TraitStmt,
     LetStmt,
+    WhileStmt,
+    ForStmt,
+    BreakStmt,
+    ContinueStmt,
+    ReturnStmt,
+    ExprStmt, 
+    AssignStmt,
     
     FunctionType,
     TokenKind,
@@ -25,15 +31,10 @@ import {
     TypeKind,
     
     Expr,
+    MatchArm,
     CallExpr,
     IfExpr,
-    WhileStmt,
-    ForStmt,
-    BreakStmt,
-    ContinueStmt,
-    ReturnStmt,
-    ExprStmt, 
-    AssignStmt,
+    BlockExpr,
 
     AST,
     Span,
@@ -112,6 +113,7 @@ export class Parser {
             origin: ErrorOrigin.Parser,
             kind: ErrorKind.UnexpectedToken,
             message: "Expected type declaration",
+            position: this.tokens[this.current].span.start,
         }
 
         const init = this.match(TokenKind.Equal)
@@ -156,17 +158,17 @@ export class Parser {
         const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
-        if (!this.match(TokenKind.LeftCurlyBrace)) {
-            return this.error(TokenKind.LeftCurlyBrace);
+        if (!this.match(TokenKind.LeftBrace)) {
+            return this.error(TokenKind.LeftBrace);
         }
 
         const fields: EnumStmt["fields"] = [];
-        while (!this.check(TokenKind.RightCurlyBrace)) {
+        while (!this.check(TokenKind.RightBrace)) {
             const name = this.consume(TokenKind.Ident);
             if (isError(name)) return name;
 
             const types: Type[] = [];
-            while (this.check(TokenKind.RightCurlyBrace)) {
+            while (this.check(TokenKind.RightBrace)) {
                 const type = this.consume_type();
                 if (isError(type)) return type;
                 types.push(type);
@@ -196,12 +198,12 @@ export class Parser {
 
         this.interfaces.add(name);
 
-        if (!this.match(TokenKind.LeftCurlyBrace)) {
-            return this.error(TokenKind.LeftCurlyBrace);
+        if (!this.match(TokenKind.LeftBrace)) {
+            return this.error(TokenKind.LeftBrace);
         }
 
         const fields: StructStmt["fields"] = [];
-        while (!this.check(TokenKind.RightCurlyBrace)) {
+        while (!this.check(TokenKind.RightBrace)) {
             const name = this.consume(TokenKind.Ident);
             if (isError(name)) return name;
 
@@ -239,12 +241,12 @@ export class Parser {
             : undefined;
         if (isError(for_name)) return for_name;
         
-        if (!this.match(TokenKind.LeftCurlyBrace)) {
-            return this.error(TokenKind.LeftCurlyBrace);
+        if (!this.match(TokenKind.LeftBrace)) {
+            return this.error(TokenKind.LeftBrace);
         }
 
         const methods: ImplStmt["methods"] = [];
-        while (!this.match(TokenKind.RightCurlyBrace)) {
+        while (!this.match(TokenKind.RightBrace)) {
             const decl = this.fn_decl();
             if (isError(decl)) return decl;
 
@@ -267,12 +269,12 @@ export class Parser {
         const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
         
-        if (!this.match(TokenKind.LeftCurlyBrace)) {
-            return this.error(TokenKind.LeftCurlyBrace);
+        if (!this.match(TokenKind.LeftBrace)) {
+            return this.error(TokenKind.LeftBrace);
         }
 
         const methods: TraitStmt["methods"] = [];
-        while (!this.match(TokenKind.RightCurlyBrace)) {
+        while (!this.match(TokenKind.RightBrace)) {
             const type = this.function_type();
             if (isError(type)) return type;
 
@@ -307,6 +309,7 @@ export class Parser {
             origin: ErrorOrigin.Parser,
             kind: ErrorKind.UnexpectedToken,
             message: "Expected type declaration",
+            position: this.tokens[this.current].span.start,
         }
 
         const init = this.match(TokenKind.Equal)
@@ -476,6 +479,7 @@ export class Parser {
                     origin: ErrorOrigin.Parser,
                     kind: ErrorKind.UnexpectedToken,
                     message: "Invalid assignment target",
+                    position: this.tokens[this.current].span.start,
                 };
             }
         }
@@ -484,6 +488,7 @@ export class Parser {
             origin: ErrorOrigin.Parser,
             kind: ErrorKind.UnexpectedToken,
             message: "Expected assign statement",
+            position: this.tokens[this.current].span.start,
         };
     }
 
@@ -573,6 +578,7 @@ export class Parser {
             origin: ErrorOrigin.Parser,
             kind: ErrorKind.UnexpectedToken,
             message: "Expected a type",
+            position: this.tokens[this.current].span.start,
         };
     }
 
@@ -586,13 +592,13 @@ export class Parser {
     }
 
     private block_expr(): Result<BlockExpr> {
-        if (!this.match(TokenKind.LeftCurlyBrace)) {
-            return this.error(TokenKind.LeftCurlyBrace);
+        if (!this.match(TokenKind.LeftBrace)) {
+            return this.error(TokenKind.LeftBrace);
         }
 
         const stmts: BlockExpr["stmts"] = [];
         
-        while (!this.check(TokenKind.RightCurlyBrace)) {
+        while (!this.check(TokenKind.RightBrace)) {
             const stmt = this.decl_stmt();
             if (isError(stmt)) {
                 this.errors.push(stmt);
@@ -601,8 +607,8 @@ export class Parser {
             }
         }
 
-        if (!this.match(TokenKind.RightCurlyBrace)) {
-            return this.error(TokenKind.RightCurlyBrace);
+        if (!this.match(TokenKind.RightBrace)) {
+            return this.error(TokenKind.RightBrace);
         }
         
         return this.node({
@@ -634,6 +640,7 @@ export class Parser {
                 origin: ErrorOrigin.Parser,
                 kind: ErrorKind.UnexpectedToken,
                 message: "Expected falsy expression",
+                position: this.tokens[this.current].span.start,
             };
         }
 
@@ -786,7 +793,52 @@ export class Parser {
             }
 
             return expr;
-        } else if (precedence === 14) { // Grouping. `( ... )`
+        } else if (precedence === 14) { // Match expression. `match (...) { ... }`
+            if (this.match(TokenKind.Match)) {
+                const expr = this.operation_expr();
+                if (isError(expr)) return expr;
+
+                if (!this.match(TokenKind.LeftBrace)) {
+                    return this.error(TokenKind.LeftBrace);
+                }
+
+                const arms: MatchArm[] = [];
+                while (!this.match(TokenKind.RightBrace)) {
+                    const e = this.operation_expr();
+                    if (isError(e)) return e;
+                    
+                    if (!this.match(TokenKind.FatArrow)) {
+                        return this.error(TokenKind.FatArrow);
+                    }
+
+                    const b = this.operation_expr();
+                    if (isError(b)) return b;
+                    
+                    if (!this.match(TokenKind.Comma)) {
+                        break;
+                    }
+                    
+                    arms.push({
+                        expr: e,
+                        body: b,
+                        span: {
+                            start: e.span.start,
+                            end: b.span.end,
+                        }
+                    });
+                }
+
+                // console.log(expr, arms);
+
+                return this.node({
+                    kind: ExprKind.Match,
+                    expr,
+                    arms,
+                });
+            }
+
+            return this.operation_expr(precedence+1);
+        } else if (precedence === 15) { // Grouping. `( ... )`
             if (this.match(TokenKind.LeftParen)) {
                 const expr = this.operation_expr();
                 
@@ -798,21 +850,21 @@ export class Parser {
             }
 
             return this.operation_expr(precedence+1);
-        } else if (precedence === 15) { // If Expression `if (...) { ... }`
+        } else if (precedence === 16) { // If Expression `if (...) { ... }`
             const expr = this.if_expr();
             if (isError(expr)) {
                 return this.operation_expr(precedence+1);
             }
 
             return expr;
-        } else if (precedence === 16) { // Block Expression `{ ... }`
+        } else if (precedence === 17) { // Block Expression `{ ... }`
             const expr = this.block_expr();
             if (isError(expr)) {
                 return this.operation_expr(precedence+1);
             }
 
             return expr;
-        } else if (precedence === 17) { // @TODO Macro call. Initial thought (macro!(ast) => template) or (macro!(tokens) => tokens)
+        } else if (precedence === 18) { // @TODO Macro call. Initial thought (macro!(ast) => template) or (macro!(tokens) => tokens)
             if (this.check(TokenKind.Ident)) {}
 
             return this.operation_expr(precedence+1);
@@ -832,7 +884,8 @@ export class Parser {
         return {
             origin: ErrorOrigin.Parser,
             kind: ErrorKind.UnexpectedToken,
-            message: "Expected scalar expresion",
+            message: "Expected scalar expression",
+            position: this.tokens[this.current].span.start,
         };
     }
 
@@ -844,6 +897,7 @@ export class Parser {
             origin: ErrorOrigin.Parser,
             kind: ErrorKind.UnexpectedToken,
             message: `Unexpected token ${t.value} expected ${expected} found ${t.value}`,
+            position: this.tokens[this.current].span.start,
         };
     }
 
@@ -873,7 +927,7 @@ export class Parser {
         return t;
     }
 
-    private node<T>(node: T):  & { span: Span } & T { 
+    private node<T>(node: T): { span: Span } & T { 
         const out = {
             ...node,
             span: {

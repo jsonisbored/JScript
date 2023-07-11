@@ -18,7 +18,7 @@ export class Generator {
     generate(): string {
         let output = "";
         for (const stmt of this.ast.stmts) {
-            output += this.stmt(stmt);
+            output += this.stmt(stmt) + "\n";
         }
 
         return output;
@@ -56,8 +56,8 @@ export class Generator {
             }`;
         } else if (stmt.kind === StmtKind.Fn) {
             output += `function ${stmt.type.name.value}(${
-                stmt.type.params.map(param => param.name.value).join(", ")
-            }) ${
+                stmt.type.params.map(param => `${param.name.value}: ${param.type.value}`).join(", ")
+            }): ${stmt.type.return_type?.value} ${
                 this.expr(stmt.block)
             }`;
         }
@@ -81,6 +81,22 @@ export class Generator {
             expr.kind === ExprKind.Number
         ) {
             output += expr.value;
+        } else if (expr.kind === ExprKind.Switch) {
+            // console.log(expr.expr);
+            output += `switch (${this.expr(expr.expr)}) {\n`;
+            for (const arm of expr.arms) {
+                output += "    ".repeat(this.depth+1);
+
+                const expr = this.expr(arm.expr);
+                if (expr === "_") {
+                    output += "default: \n";
+                } else {
+                    output += `case ${expr.split(" | ").join(`:\n${"    ".repeat(this.depth+1)}case `)}: \n`;
+                }
+
+                output += "    ".repeat(this.depth+1) + this.stmt(arm.body) + "\n";
+            }
+            output += "    ".repeat(this.depth)+"}";
         } else if (expr.kind === ExprKind.Block) {
             output += `{\n`;
 
@@ -94,7 +110,7 @@ export class Generator {
 
             output += "    ".repeat(this.depth)+`}`;
         } else if (expr.kind === ExprKind.GetField) {
-            output += `${expr.expr}.${expr.field}`;
+            output += `${this.expr(expr.expr)}.${expr.field.value}`;
         } else if (expr.kind === ExprKind.GetIndex) {
             output += `${expr.expr}[${expr.index}]`;
         } else if (expr.kind === ExprKind.Lambda) { // @TODO Parse lamdas

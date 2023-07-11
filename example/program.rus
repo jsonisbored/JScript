@@ -1,12 +1,12 @@
 type NewsArticle = {
-    content: String,
-}
+    content: string,
+};
 
 impl String for NewsArticle {
-    fn to_string(self: NewsArticle): Number {
+    fn to_string(self: NewsArticle): number {
         self.content
     },
-}
+};
 
 console.log("" + NewsArticle({ content: "BREAKING NEWS!"}).to_string()); // -> "BREAKING NEWS!"
 

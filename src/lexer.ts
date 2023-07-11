@@ -22,6 +22,7 @@ export class Lexer {
         "in": TokenKind.In,
         "switch": TokenKind.Match,
         "if": TokenKind.If,
+        "match": TokenKind.Match,
         "else": TokenKind.Else,
         "let": TokenKind.Let,
         "mut": TokenKind.Mut,
@@ -57,9 +58,8 @@ export class Lexer {
         while (this.current < this.chars.length-1) { // Check for end of string
             const c = this.advance() as string; // Is safe
             this.start = this.current;
-            console.log(c);
             
-
+            
             if (c === ':') {
                 if (this.match_char(':')) {
                     this.addToken(TokenKind.ColonColon, "::");
@@ -80,14 +80,14 @@ export class Lexer {
                 } else {
                     this.addToken(TokenKind.Dot, ".");
                 }
-            } else if (c === '(') {
+            }else if (c === '(') {
                 this.addToken(TokenKind.LeftParen, "(");
             } else if (c === ')') { 
                 this.addToken(TokenKind.RightParen, ")");
             } else if (c === '{') {
-                this.addToken(TokenKind.LeftCurlyBrace, "{");
+                this.addToken(TokenKind.LeftBrace, "{");
             } else if (c === '}') {
-                this.addToken(TokenKind.RightCurlyBrace, "}");
+                this.addToken(TokenKind.RightBrace, "}");
             } else if (c === '[') {
                 this.addToken(TokenKind.LeftBracket, "[");
             } else if (c === ']') {
@@ -105,7 +105,17 @@ export class Lexer {
                     this.addToken(TokenKind.Plus, "+");
                 }
             } else if (c === '/') {
-                if (this.match_char('=')) {
+                if (this.match_char("/")) {
+                    while (this.chars[this.current] !== "\n") {
+                        this.advance();
+                    }
+                } else if (this.match_char("*")) {
+                    while (this.chars[this.current] !== "*" || this.chars[this.current+1] !== "/") {
+                        this.advance();
+                    }
+                    this.advance();
+                    this.advance();
+                } else if (this.match_char('=')) {
                     this.addToken(TokenKind.SlashEqual, "/=");
                 } else {
                     this.addToken(TokenKind.Slash, "/");
@@ -137,6 +147,8 @@ export class Lexer {
             } else if (c === '=') {
                 if (this.match_char('=')) {
                     this.addToken(TokenKind.EqualEqual, "==");
+                } else if (this.match_char('>')) {
+                    this.addToken(TokenKind.FatArrow, "=>");
                 } else {
                     this.addToken(TokenKind.Equal, "=");
                 }
