@@ -24,6 +24,7 @@ export enum ExprKind {
     Switch          = "Switch",
     Ident           = "Ident",
     Block           = "Block",
+    Object          = "Object",
     If              = "If",
     Macro           = "Macro",
 }
@@ -52,6 +53,14 @@ export interface CallExpr {
 export interface CallInterfaceExpr {
     kind: ExprKind.CallStruct,
     interface: Expr,
+    args: {
+        name: Token,
+        type: Type,
+    }[],
+    span: Span,
+}
+export interface ObjectExpr {
+    kind: ExprKind.Object,
     args: {
         name: Token,
         type: Type,
@@ -171,6 +180,7 @@ export type Expr =
     | StringExpr
     | CallExpr
     | CallInterfaceExpr
+    | ObjectExpr
     | GetFieldExpr
     | GetIndexExpr
     | LambdaExpr

@@ -35,6 +35,7 @@ import {
     CallExpr,
     IfExpr,
     BlockExpr,
+    ObjectExpr,
 
     AST,
     Span,
@@ -46,8 +47,6 @@ export class Parser {
     private readonly errors: Error[] = [];
     private start = 0;
     private current = 0;
-
-    private readonly interfaces = new Set<Token>();
 
     constructor(tokens: Token[]) {
         this.tokens = tokens;
@@ -62,6 +61,7 @@ export class Parser {
 
         while (this.current < this.tokens.length-1) {
             const decl = this.decl_stmt();
+            // console.log(decl);
             if (isError(decl)) {
                 this.errors.push(decl);
                 this.current ++;
@@ -196,7 +196,9 @@ export class Parser {
         const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
-        this.interfaces.add(name);
+        if (!this.match(TokenKind.Equal)) {
+            return this.error(TokenKind.Equal);
+        }
 
         if (!this.match(TokenKind.LeftBrace)) {
             return this.error(TokenKind.LeftBrace);
@@ -251,6 +253,10 @@ export class Parser {
             if (isError(decl)) return decl;
 
             methods.push(decl);
+
+            if (this.match([TokenKind.Comma, TokenKind.RightBrace])) {
+                break;
+            }
         }
 
         return this.node({
@@ -591,6 +597,20 @@ export class Parser {
         return expr;
     }
 
+    private blocky_expr(): Result<BlockExpr | ObjectExpr> {
+        const current = this.current;
+
+        const object = this.object_expr();
+        if (!isError(object)) return object;
+
+        this.current = current;
+
+        const block = this.block_expr();
+        if (!isError(block)) return block;
+
+        return this.error(TokenKind.LeftBrace);
+    }
+
     private block_expr(): Result<BlockExpr> {
         if (!this.match(TokenKind.LeftBrace)) {
             return this.error(TokenKind.LeftBrace);
@@ -614,6 +634,38 @@ export class Parser {
         return this.node({
             kind: ExprKind.Block,
             stmts,
+        });
+    }
+
+    private object_expr(): Result<ObjectExpr> {
+        if (!this.match(TokenKind.LeftBrace)) {
+            return this.error(TokenKind.LeftBrace);
+        }
+
+        const args: ObjectExpr["args"] = [];
+        
+        while (!this.check(TokenKind.RightBrace)) {
+            const name = this.consume(TokenKind.Ident);
+            if (isError(name)) return name;
+
+            if (!this.match(TokenKind.Colon)) {
+                return this.error(TokenKind.Colon);
+            }
+
+            const type = this.operation_expr();
+            if (isError(type)) return type;
+
+            if (!this.match(TokenKind.Comma)) {
+                if (!this.match(TokenKind.RightBrace)) {
+                    return this.error(TokenKind.RightBrace);
+                }
+                break;
+            }
+        }
+
+        return this.node({
+            kind: ExprKind.Object,
+            args,
         });
     }
 
@@ -740,7 +792,7 @@ export class Parser {
                         return this.error(TokenKind.Comma);
                     }
             
-                    const arg = this.operation_expr();
+                    const arg = this.any_expr();
                     if (isError(arg)) return arg;
                     
                     args.push(arg);
@@ -815,6 +867,9 @@ export class Parser {
                     if (isError(b)) return b;
                     
                     if (!this.match(TokenKind.Comma)) {
+                        if (!this.match(TokenKind.RightBrace)) {
+                            return this.error(TokenKind.RightBrace);
+                        }
                         break;
                     }
                     
@@ -857,8 +912,8 @@ export class Parser {
             }
 
             return expr;
-        } else if (precedence === 17) { // Block Expression `{ ... }`
-            const expr = this.block_expr();
+        } else if (precedence === 17) { // Block and Object expressions `{ ... }`
+            const expr = this.blocky_expr();
             if (isError(expr)) {
                 return this.operation_expr(precedence+1);
             }
@@ -904,7 +959,7 @@ export class Parser {
     private match(expected: TokenKind | TokenKind[]): boolean {
         if (!expected.includes(this.tokens[this.current]?.kind)) return false;
 
-        this.current ++;
+        this.current += Array.isArray(expected) ? expected.length : 1;;
 
         return true;
     }
@@ -927,7 +982,7 @@ export class Parser {
         return t;
     }
 
-    private node<T>(node: T): { span: Span } & T { 
+    private node<T extends Omit<Stmt|Expr, "span">>(node: T): { span: Span } & T { 
         const out = {
             ...node,
             span: {

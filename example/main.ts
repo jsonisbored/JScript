@@ -31,10 +31,10 @@ const { ast, errors: _errors } = new Parser(tokens).parse();
 function format_error(e: Error): string {
     return `${input.slice(e.position-50, e.position)}\n${e.message}`;
 }
-console.log(_errors.map(format_error));
+// console.log(_errors.map(format_error));
 
 const transformed = new Transformer(ast).transform();
-console.dir(transformed, { depth: 10, });
+// console.dir(transformed, { depth: 10, });
 
 const js = new Generator(transformed).generate();
 // console.log(js);

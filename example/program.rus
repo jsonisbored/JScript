@@ -1,14 +1,15 @@
 type NewsArticle = {
     content: string,
-};
+}
 
 impl String for NewsArticle {
     fn to_string(self: NewsArticle): number {
         self.content
     },
-};
+}
 
-console.log("" + NewsArticle({ content: "BREAKING NEWS!"}).to_string()); // -> "BREAKING NEWS!"
+// @TODO: Differentiate between Block and Object expressions
+console.log(NewsArticle({ content: "BREAKING NEWS!" }).to_string());
 
 
 match result {
