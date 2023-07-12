@@ -4,11 +4,10 @@ type NewsArticle = {
 
 impl String for NewsArticle {
     fn to_string(self: NewsArticle): number {
-        self.content
+        return self.content;
     },
 }
 
-// @TODO: Differentiate between Block and Object expressions
 console.log(NewsArticle({ content: "BREAKING NEWS!" }).to_string());
 
 

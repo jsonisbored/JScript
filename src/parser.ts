@@ -137,7 +137,7 @@ export class Parser {
             return this.error(TokenKind.Fn);
         }
 
-        const type = this.function_type();
+        const type = this.fn_type();
         if (isError(type)) return type;
 
         const block = this.block_expr();
@@ -281,7 +281,7 @@ export class Parser {
 
         const methods: TraitStmt["methods"] = [];
         while (!this.match(TokenKind.RightBrace)) {
-            const type = this.function_type();
+            const type = this.fn_type();
             if (isError(type)) return type;
 
             const block = this.block_expr();
@@ -518,7 +518,7 @@ export class Parser {
 
 
 
-    private function_type(): Result<FunctionType> {
+    private fn_type(): Result<FunctionType> {
         const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
@@ -642,30 +642,33 @@ export class Parser {
             return this.error(TokenKind.LeftBrace);
         }
 
-        const args: ObjectExpr["args"] = [];
+        const props: ObjectExpr["props"] = [];
         
         while (!this.check(TokenKind.RightBrace)) {
-            const name = this.consume(TokenKind.Ident);
-            if (isError(name)) return name;
+            const key = this.consume(TokenKind.Ident);
+            if (isError(key)) return key;
 
             if (!this.match(TokenKind.Colon)) {
                 return this.error(TokenKind.Colon);
             }
 
-            const type = this.operation_expr();
-            if (isError(type)) return type;
+            const value = this.operation_expr();
+            if (isError(value)) return value;
+
+            props.push({ key, value });
 
             if (!this.match(TokenKind.Comma)) {
-                if (!this.match(TokenKind.RightBrace)) {
-                    return this.error(TokenKind.RightBrace);
-                }
                 break;
             }
         }
 
+        if (!this.match(TokenKind.RightBrace)) {
+            return this.error(TokenKind.RightBrace);
+        }
+
         return this.node({
             kind: ExprKind.Object,
-            args,
+            props,
         });
     }
 
@@ -779,23 +782,24 @@ export class Parser {
             }
 
             return this.operation_expr(precedence+1);
-        } else if (precedence === 12) { // Call expression. `func(arg)` or `obj.method(arg1, arg2)`
+        } else if (precedence === 12 || precedence === 14) { // Call expression. `func(arg)` or `obj.method(arg1, arg2)`
             const expr = this.operation_expr(precedence+1);
             
             if (this.match(TokenKind.LeftParen)) {
                 const args: CallExpr["args"] = [];
-                while (!this.match(TokenKind.RightParen)) {
-                    if (
-                        !this.check(TokenKind.LeftParen, -1) &&
-                        !this.match(TokenKind.Comma)
-                    ) {
-                        return this.error(TokenKind.Comma);
-                    }
-            
+                while (!this.check(TokenKind.RightParen)) {
                     const arg = this.any_expr();
                     if (isError(arg)) return arg;
                     
                     args.push(arg);
+
+                    if (!this.match(TokenKind.Comma)) {
+                        break;
+                    }
+                }
+
+                if (!this.match(TokenKind.RightParen)) {
+                    return this.error(TokenKind.RightParen);
                 }
 
                 if (isError(expr)) return expr;
@@ -825,7 +829,7 @@ export class Parser {
                         index,
                     });
                 }
-                    
+                
                 return expr;
             }
 
@@ -840,12 +844,24 @@ export class Parser {
                         field,
                     });
                 }
-                    
+                
                 return expr;
             }
 
             return expr;
-        } else if (precedence === 14) { // Match expression. `match (...) { ... }`
+        } else if (precedence === 15) { // Grouping. `( ... )`
+            if (this.match(TokenKind.LeftParen)) {
+                const expr = this.operation_expr();
+                
+                if (!this.match(TokenKind.RightParen)) {
+                    return this.error(TokenKind.RightParen);
+                }
+                
+                return expr;
+            }
+
+            return this.operation_expr(precedence+1);
+        } else if (precedence === 16) { // Match expression. `match (...) { ... }`
             if (this.match(TokenKind.Match)) {
                 const expr = this.operation_expr();
                 if (isError(expr)) return expr;
@@ -855,7 +871,7 @@ export class Parser {
                 }
 
                 const arms: MatchArm[] = [];
-                while (!this.match(TokenKind.RightBrace)) {
+                while (!this.check(TokenKind.RightBrace)) {
                     const e = this.operation_expr();
                     if (isError(e)) return e;
                     
@@ -867,9 +883,6 @@ export class Parser {
                     if (isError(b)) return b;
                     
                     if (!this.match(TokenKind.Comma)) {
-                        if (!this.match(TokenKind.RightBrace)) {
-                            return this.error(TokenKind.RightBrace);
-                        }
                         break;
                     }
                     
@@ -883,7 +896,9 @@ export class Parser {
                     });
                 }
 
-                // console.log(expr, arms);
+                if (!this.match(TokenKind.RightBrace)) {
+                    return this.error(TokenKind.RightBrace);
+                }
 
                 return this.node({
                     kind: ExprKind.Match,
@@ -893,33 +908,21 @@ export class Parser {
             }
 
             return this.operation_expr(precedence+1);
-        } else if (precedence === 15) { // Grouping. `( ... )`
-            if (this.match(TokenKind.LeftParen)) {
-                const expr = this.operation_expr();
-                
-                if (!this.match(TokenKind.RightParen)) {
-                    return this.error(TokenKind.RightParen);
-                }
-                
-                return expr;
-            }
-
-            return this.operation_expr(precedence+1);
-        } else if (precedence === 16) { // If Expression `if (...) { ... }`
+        } else if (precedence === 17) { // If Expression `if (...) { ... }`
             const expr = this.if_expr();
             if (isError(expr)) {
                 return this.operation_expr(precedence+1);
             }
 
             return expr;
-        } else if (precedence === 17) { // Block and Object expressions `{ ... }`
+        } else if (precedence === 18) { // Block and Object expressions `{ ... }`
             const expr = this.blocky_expr();
             if (isError(expr)) {
                 return this.operation_expr(precedence+1);
             }
 
             return expr;
-        } else if (precedence === 18) { // @TODO Macro call. Initial thought (macro!(ast) => template) or (macro!(tokens) => tokens)
+        } else if (precedence === 19) { // @TODO Macro call. Initial thought (macro!(ast) => template) or (macro!(tokens) => tokens)
             if (this.check(TokenKind.Ident)) {}
 
             return this.operation_expr(precedence+1);
@@ -959,7 +962,7 @@ export class Parser {
     private match(expected: TokenKind | TokenKind[]): boolean {
         if (!expected.includes(this.tokens[this.current]?.kind)) return false;
 
-        this.current += Array.isArray(expected) ? expected.length : 1;;
+        this.current += Array.isArray(expected) ? expected.length : 1;
 
         return true;
     }

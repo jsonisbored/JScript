@@ -61,9 +61,9 @@ export interface CallInterfaceExpr {
 }
 export interface ObjectExpr {
     kind: ExprKind.Object,
-    args: {
-        name: Token,
-        type: Type,
+    props: {
+        key: Token,
+        value: Expr,
     }[],
     span: Span,
 }

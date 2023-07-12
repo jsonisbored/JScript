@@ -133,6 +133,14 @@ export class Generator {
             if (expr.else) {
                 output += this.expr(expr.else);
             }
+        } else if (expr.kind === ExprKind.Object) {
+            output += "{\n";
+            for (const prop of expr.props) {
+                output += "    ".repeat(this.depth+1);
+                output += `${prop.key.value}: ${this.expr(prop.value)},`;
+            }
+            output += "    ".repeat(this.depth);
+            output += "\n}";
         }
 
         return output;

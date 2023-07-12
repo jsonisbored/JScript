@@ -23,10 +23,10 @@ const input = await Deno.readTextFile("./example/program.rus");
 // console.log(input);
 
 const { tokens } = new Lexer(input).tokenizer();
-
 // console.log(tokens);
+
 const { ast, errors: _errors } = new Parser(tokens).parse();
-// console.dir(ast, { depth: 10, });
+// console.dir(ast, { depth: 15, });
 
 function format_error(e: Error): string {
     return `${input.slice(e.position-50, e.position)}\n${e.message}`;
