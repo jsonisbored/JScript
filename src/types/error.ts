@@ -4,6 +4,7 @@ export enum ErrorKind {
     UpdateLater = "UpdateLater",
 }
 export enum ErrorOrigin {
+    Transformer = "Transformer",
     Parser = "Parser",
     Checker = "Checker",
 }

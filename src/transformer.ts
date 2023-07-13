@@ -6,33 +6,58 @@ import {
     Expr,
     ExprKind,
 
+    Result,
+
     Stmt,
     StmtKind,
     SwitchArm,
+
+    isError,
+    Error,
+ErrorKind,
+ErrorOrigin,
 } from "./lib.ts";
+
+interface Scope {
+    structs: Array<{ name: string }>,
+}
 
 
 export class Transformer {
     ast: AST;
+    errors: Error[] = [];
+
+    private scopes: Scope[] = [{ structs: [] }];
+    private scope_level = 0;
 
     constructor(ast: AST) {
         this.ast = ast;
         return this;
     }
 
-    public transform(): AST {
+    public transform(): { errors: Error[], ast: AST } {
         const new_ast: AST = {
             stmts: [],
         };
 
         for (const stmt of this.ast.stmts) {
-            new_ast.stmts.push(this.stmt(stmt));
+            const new_stmt = this.stmt(stmt);
+
+            if (isError(new_stmt)) {
+                this.errors.push(new_stmt);
+                continue;
+            }
+
+            new_ast.stmts.push(new_stmt);
         }
 
-        return new_ast;
+        return {
+            errors: this.errors,
+            ast: new_ast,
+        };
     }
 
-    private stmt(stmt: Stmt): Stmt {
+    private stmt(stmt: Stmt): Result<Stmt> {
         if (stmt.kind === StmtKind.Fn) {
             return {
                 kind: StmtKind.Fn,
@@ -66,17 +91,95 @@ export class Transformer {
                     span: stmt.span,
                 };
             }
+        } else if (stmt.kind === StmtKind.Struct) {
+            let struct;
+            for (let level = this.scope_level; level >= 0; level --) {
+                const scope = this.scopes[level];
+                struct = scope.structs.find(s => s.name === stmt.name.value);
+                if (struct) {
+                    break;
+                }
+            }
+
+            if (!struct) {
+                this.scopes[this.scope_level].structs.push({
+                    name: stmt.name.value,
+                });
+            } else {
+                console.log("struct already exists");
+            }
         }
         return stmt;
     }
 
-    private expr(expr: Expr): Expr {
+    private expr(expr: Expr): Result<Expr> {
         if (expr.kind === ExprKind.Block) {
+            const stmts = [];
+
+            for (let i = 0; i < expr.stmts.length; i ++) {
+                const new_stmt = this.stmt(expr.stmts[i]);
+
+                if (isError(new_stmt)) {
+                    this.errors.push(new_stmt);
+                    continue;
+                }
+
+                stmts.push(new_stmt);
+            }
+
             return {
                 kind: ExprKind.Block,
-                stmts: expr.stmts.map(s => this.stmt(s)),
+                stmts: stmts,
                 span: expr.span,
             };
+        } else if (expr.kind === ExprKind.Match) {
+
+        } else if (expr.kind === ExprKind.Call) {
+            let struct;
+
+            for (let level = this.scope_level; level >= 0; -- level) {
+                const scope = this.scopes[level];
+
+                struct = scope.structs.find(s => 
+                    expr.func.kind === ExprKind.Ident && 
+                    s.name === expr.func.ident.value);
+
+                if (struct) {
+                    break;
+                }
+            }
+
+            if (struct) {
+                if (expr.args[0].kind !== ExprKind.Object) {
+                    return {
+                        origin: ErrorOrigin.Transformer,
+                        kind: ErrorKind.UpdateLater,
+                        message: "expected object",
+                        position: expr.args[0].span.start,
+                    }
+                }
+
+                return expr.args[0];
+            }
+
+            return expr;
+
+            // let struct;
+            // for (let level = this.scope_level; level >= 0; level --) {
+            //     const scope = this.scopes[level];
+            //     struct = scope.structs.find(s => s.name === func);
+            //     if (struct) {
+            //         break;
+            //     }
+            // }
+            
+            // if (struct) {
+            //     output += this.expr(expr.args[0]);
+            // } else {
+            //     output += `${func}(${
+            //         expr.args.map(a => this.expr(a)).join(", ")
+            //     })`;
+            // }
         }
 
         return expr;

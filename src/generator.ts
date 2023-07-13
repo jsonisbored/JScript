@@ -69,9 +69,7 @@ export class Generator {
         let output = "";
 
         if (expr.kind === ExprKind.Call) {
-            output += `${this.expr(expr.func)}(${
-                expr.args.map(a => this.expr(a)).join(", ")
-            })`;
+            
         } else if (expr.kind === ExprKind.Ident) {
             output += expr.ident.value;
         } else if (expr.kind === ExprKind.String) {
@@ -82,7 +80,6 @@ export class Generator {
         ) {
             output += expr.value;
         } else if (expr.kind === ExprKind.Switch) {
-            // console.log(expr.expr);
             output += `switch (${this.expr(expr.expr)}) {\n`;
             for (const arm of expr.arms) {
                 output += "    ".repeat(this.depth+1);
@@ -105,7 +102,7 @@ export class Generator {
             for (const s of expr.stmts) {
                 output += this.stmt(s);
             }
-
+            
             this.depth --;
 
             output += "    ".repeat(this.depth)+`}`;
