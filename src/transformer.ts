@@ -108,7 +108,16 @@ export class Transformer {
             } else {
                 console.log("struct already exists");
             }
+        } else if (stmt.kind === StmtKind.Expr) {
+            const expr = this.expr(stmt.expr);
+            if (isError(expr)) return expr;
+
+            return {
+                ...stmt,
+                expr: expr,
+            };
         }
+
         return stmt;
     }
 
@@ -133,7 +142,25 @@ export class Transformer {
                 span: expr.span,
             };
         } else if (expr.kind === ExprKind.Match) {
+            const arms: SwitchArm[] = [];
 
+            for (const arm of expr.arms) {
+                arms.push({
+                    expr: arm.expr,
+                    body: {
+                        kind: StmtKind.Expr,
+                        expr: arm.body,
+                        span: arm.body.span
+                    },
+                    span: arm.span,
+                });
+            }
+
+            return {
+                ...expr,
+                kind: ExprKind.Switch,
+                arms: arms,
+            };
         } else if (expr.kind === ExprKind.Call) {
             let struct;
 

@@ -124,7 +124,7 @@ export interface MatchExpr {
     kind: ExprKind.Match,
     expr: Expr,
     arms: MatchArm[],
-    default?: Expr,
+    // default?: Expr,
     span: Span,
 }
 export interface SwitchArm {

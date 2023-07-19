@@ -1,4 +1,4 @@
-type NewsArticle = {
+/* type NewsArticle = {
     content: string,
 }
 
@@ -10,7 +10,7 @@ impl String for NewsArticle {
 
 console.log(NewsArticle({ content: "BREAKING NEWS!" }).to_string());
 
-
+ */
 match result {
     Option.Some(val) => console.log(val),
     Option.None => console.log("none"),
