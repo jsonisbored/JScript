@@ -14,8 +14,8 @@ import {
 
     isError,
     Error,
-ErrorKind,
-ErrorOrigin,
+    ErrorKind,
+    ErrorOrigin,
 } from "./lib.ts";
 
 interface Scope {
@@ -113,8 +113,9 @@ export class Transformer {
             if (isError(expr)) return expr;
 
             return {
-                ...stmt,
+                kind: stmt.kind,
                 expr: expr,
+                span: stmt.span,
             };
         }
 
@@ -157,9 +158,10 @@ export class Transformer {
             }
 
             return {
-                ...expr,
                 kind: ExprKind.Switch,
+                expr: expr.expr,
                 arms: arms,
+                span: expr.span,
             };
         } else if (expr.kind === ExprKind.Call) {
             let struct;
@@ -190,23 +192,6 @@ export class Transformer {
             }
 
             return expr;
-
-            // let struct;
-            // for (let level = this.scope_level; level >= 0; level --) {
-            //     const scope = this.scopes[level];
-            //     struct = scope.structs.find(s => s.name === func);
-            //     if (struct) {
-            //         break;
-            //     }
-            // }
-            
-            // if (struct) {
-            //     output += this.expr(expr.args[0]);
-            // } else {
-            //     output += `${func}(${
-            //         expr.args.map(a => this.expr(a)).join(", ")
-            //     })`;
-            // }
         }
 
         return expr;

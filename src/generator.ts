@@ -69,7 +69,7 @@ export class Generator {
         let output = "";
 
         if (expr.kind === ExprKind.Call) {
-            
+            output += this.expr(expr.func) + `(${expr.args.map(e => this.expr(e)).join(", ")})`;
         } else if (expr.kind === ExprKind.Ident) {
             output += expr.ident.value;
         } else if (expr.kind === ExprKind.String) {
@@ -91,7 +91,7 @@ export class Generator {
                     output += `case ${expr.split(" | ").join(`:\n${"    ".repeat(this.depth+1)}case `)}: \n`;
                 }
 
-                output += "    ".repeat(this.depth+1) + this.stmt(arm.body) + "\n";
+                output += "    ".repeat(this.depth+2) + this.stmt(arm.body);
             }
             output += "    ".repeat(this.depth)+"}";
         } else if (expr.kind === ExprKind.Block) {
