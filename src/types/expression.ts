@@ -13,7 +13,7 @@ export enum ExprKind {
     String          = "String",
     Call            = "Call",
     CallStruct      = "CallStruct",
-    GetField        = "GetProp",
+    GetField        = "GetField",
     GetIndex        = "GetIndex",
     Lambda          = "Lambda",
     Unary           = "Unary",

@@ -34,7 +34,7 @@ function format_error(e: Error): string {
 // console.log(_errors.map(format_error));
 
 const { ast: transformed } = new Transformer(ast).transform();
-console.dir(transformed, { depth: 15, });
+// console.dir(transformed, { depth: 15, });
 
 const js = new Generator(transformed).generate();
 // console.log(js);

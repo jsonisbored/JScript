@@ -170,7 +170,7 @@ export class Transformer {
                 const scope = this.scopes[level];
 
                 struct = scope.structs.find(s => 
-                    expr.func.kind === ExprKind.Ident && 
+                    (expr.func.kind === ExprKind.Ident) && 
                     s.name === expr.func.ident.value);
 
                 if (struct) {
@@ -191,7 +191,19 @@ export class Transformer {
                 return expr.args[0];
             }
 
-            return expr;
+            const args: typeof expr.args = [];
+            for (const a of expr.args) {
+                const arg = this.expr(a);
+                if (isError(arg)) return arg;
+                args.push(a);
+            }
+
+            return {
+                kind: expr.kind,
+                args: args,
+                func: expr.func,
+                span: expr.span,
+            };
         }
 
         return expr;
