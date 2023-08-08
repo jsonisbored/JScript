@@ -58,14 +58,7 @@ export class Transformer {
     }
 
     private stmt(stmt: Stmt): Result<Stmt> {
-        if (stmt.kind === StmtKind.Fn) {
-            return {
-                kind: StmtKind.Fn,
-                type: stmt.type,
-                block: this.expr(stmt.block) as BlockExpr,
-                span: stmt.span,
-            };
-        } else if (stmt.kind === StmtKind.Return) {
+        if (stmt.kind === StmtKind.Return) {
             if (stmt.expr?.kind === ExprKind.Match) {
                 const arms: SwitchArm[] = [];
                 for (const arm of stmt.expr.arms) {
@@ -90,6 +83,8 @@ export class Transformer {
                     },
                     span: stmt.span,
                 };
+            } else {
+                return stmt;
             }
         } else if (stmt.kind === StmtKind.Struct) {
             let struct;
@@ -108,6 +103,13 @@ export class Transformer {
             } else {
                 console.log("struct already exists");
             }
+
+            return {
+                kind: StmtKind.Struct,
+                name: stmt.name,
+                fields: stmt.fields,
+                span: stmt.span,
+            };
         } else if (stmt.kind === StmtKind.Expr) {
             const expr = this.expr(stmt.expr);
             if (isError(expr)) return expr;
@@ -115,6 +117,119 @@ export class Transformer {
             return {
                 kind: stmt.kind,
                 expr: expr,
+                span: stmt.span,
+            };
+        } else if (stmt.kind === StmtKind.While) {
+            const condition = this.expr(stmt.condition);
+            if (isError(condition)) return condition;
+            
+            const block = this.expr(stmt.block);
+            if (isError(block)) return block;
+
+            return {
+                kind: StmtKind.While,
+                condition: condition,
+                block: block as BlockExpr,
+                span: stmt.span,
+            };
+        } else if (stmt.kind === StmtKind.For) {
+            const iter = this.expr(stmt.iter);
+            if (isError(iter)) return iter;
+            
+            const block = this.expr(stmt.block);
+            if (isError(block)) return block;
+
+            return {
+                kind: StmtKind.For,
+                name: stmt.name,
+                iter: iter,
+                block: block as BlockExpr,
+                span: stmt.span,
+            };
+        } else if (stmt.kind === StmtKind.Let) {
+            const init = this.expr(stmt.init);
+            if (isError(init)) return init;
+
+            return {
+                kind: StmtKind.Let,
+                name: stmt.name,
+                type: stmt.type,
+                init: init,
+                mut: stmt.mut,
+                span: stmt.span,
+            };
+        } else if (stmt.kind === StmtKind.Const) {
+            const init = this.expr(stmt.init);
+            if (isError(init)) return init;
+
+            return {
+                kind: StmtKind.Const,
+                name: stmt.name,
+                type: stmt.type,
+                init: init,
+                span: stmt.span,
+            };
+        } else if (stmt.kind === StmtKind.Fn) {
+            const block = this.expr(stmt.block);
+            if (isError(block)) return block;
+
+            return {
+                kind: StmtKind.Fn,
+                type: stmt.type,
+                block: block as BlockExpr,
+                span: stmt.span,
+            };
+        } else if (stmt.kind === StmtKind.Impl) {
+            const methods: typeof stmt["methods"] = [];
+            for (const meth of stmt.methods) {
+                const b = this.expr(meth.block);
+                if (isError(b)) return b;
+
+                methods.push({
+                    kind: meth.kind,
+                    type: meth.type,
+                    block: b as BlockExpr,
+                    span: meth.span,
+                });
+            }
+
+            return {
+                kind: StmtKind.Impl,
+                impl_name: stmt.impl_name,
+                for_name: stmt.for_name,
+                methods: methods,
+                span: stmt.span,
+            };
+        } else if (stmt.kind === StmtKind.Trait) {
+            const methods: typeof stmt["methods"] = [];
+            for (const meth of stmt.methods) {
+                const b = meth.block ? this.expr(meth.block) : undefined;
+                if (isError(b)) return b;
+
+                methods.push({
+                    type: meth.type,
+                    block: b as BlockExpr,
+                });
+            }
+
+            return {
+                kind: StmtKind.Trait,
+                name: stmt.name,
+                methods: methods,
+                span: stmt.span,
+            };
+        } else if (stmt.kind === StmtKind.Assign) {
+            const expr = this.expr(stmt.expr);
+            if (isError(expr)) return expr;
+
+            const value = this.expr(stmt.value);
+            if (isError(value)) return value;
+
+            return {
+                kind: StmtKind.Assign,
+                expr: expr as typeof stmt["expr"],
+                operator: stmt.operator,
+                value: value,
                 span: stmt.span,
             };
         }
