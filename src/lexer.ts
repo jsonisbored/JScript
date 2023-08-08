@@ -60,19 +60,19 @@ export class Lexer {
             this.start = this.current;
             
             
-            if (c === ':') {
-                if (this.match_char(':')) {
+            if (c === ":") {
+                if (this.match_char(":")) {
                     this.addToken(TokenKind.ColonColon, "::");
                 } else {
                     this.addToken(TokenKind.Colon, ":");
                 }
-            } else if (c === ';') {
+            } else if (c === ";") {
                 this.addToken(TokenKind.Semicolon, ";");
-            } else if (c === ',') {
+            } else if (c === ",") {
                 this.addToken(TokenKind.Comma, ",");
-            } else if (c === '.') {
-                if (this.match_char('.')) {
-                    if (this.match_char('=')) {
+            } else if (c === ".") {
+                if (this.match_char(".")) {
+                    if (this.match_char("=")) {
                         this.addToken(TokenKind.DotDotEqual, "..=");
                     } else {
                         this.addToken(TokenKind.DotDot, "..");
@@ -80,31 +80,31 @@ export class Lexer {
                 } else {
                     this.addToken(TokenKind.Dot, ".");
                 }
-            }else if (c === '(') {
+            }else if (c === "(") {
                 this.addToken(TokenKind.LeftParen, "(");
-            } else if (c === ')') { 
+            } else if (c === ")") { 
                 this.addToken(TokenKind.RightParen, ")");
-            } else if (c === '{') {
+            } else if (c === "{") {
                 this.addToken(TokenKind.LeftBrace, "{");
-            } else if (c === '}') {
+            } else if (c === "}") {
                 this.addToken(TokenKind.RightBrace, "}");
-            } else if (c === '[') {
+            } else if (c === "[") {
                 this.addToken(TokenKind.LeftBracket, "[");
-            } else if (c === ']') {
+            } else if (c === "]") {
                 this.addToken(TokenKind.RightBracket, "]");
-            } else if (c === '-') {
-                if (this.match_char('=')) {
+            } else if (c === "-") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.MinusEqual, "-=");
                 } else {
                     this.addToken(TokenKind.Minus, "-");
                 }
-            } else if (c === '+') {
-                if (this.match_char('=')) {
+            } else if (c === "+") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.PlusEqual, "+=");
                 } else {
                     this.addToken(TokenKind.Plus, "+");
                 }
-            } else if (c === '/') {
+            } else if (c === "/") {
                 if (this.match_char("/")) {
                     while (this.chars[this.current] !== "\n") {
                         this.advance();
@@ -115,76 +115,76 @@ export class Lexer {
                     }
                     this.advance();
                     this.advance();
-                } else if (this.match_char('=')) {
+                } else if (this.match_char("=")) {
                     this.addToken(TokenKind.SlashEqual, "/=");
                 } else {
                     this.addToken(TokenKind.Slash, "/");
                 }
-            } else if (c === '*') {
-                if (this.match_char('=')) {
+            } else if (c === "*") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.AsteriskEqual, "*=");
                 } else {
                     this.addToken(TokenKind.Asterisk, "*");
                 }
-            } else if (c === '>') {
-                if (this.match_char('=')) {
+            } else if (c === ">") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.GreaterEqual, ">=");
                 } else {
                     this.addToken(TokenKind.Greater, ">");
                 }
-            } else if (c === '<') {
-                if (this.match_char('=')) {
+            } else if (c === "<") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.LessEqual, "<=");
                 } else {
                     this.addToken(TokenKind.Less, "<");
                 }
-            } else if (c === '!') {
-                if (this.match_char('=')) {
+            } else if (c === "!") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.BangEqual, "!=");
                 } else {
                     this.addToken(TokenKind.Bang, "!");
                 }
-            } else if (c === '=') {
-                if (this.match_char('=')) {
+            } else if (c === "=") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.EqualEqual, "==");
-                } else if (this.match_char('>')) {
+                } else if (this.match_char(">")) {
                     this.addToken(TokenKind.FatArrow, "=>");
                 } else {
                     this.addToken(TokenKind.Equal, "=");
                 }
-            } else if (c === '%') {
-                if (this.match_char('=')) {
+            } else if (c === "%") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.ModulusEqual, "%=");
                 } else {
                     this.addToken(TokenKind.Modulus, "%");
                 }
-            } else if (c === '^') {
-                if (this.match_char('=')) {
+            } else if (c === "^") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.BitwiseXorEqual, "^=");
                 } else {
                     this.addToken(TokenKind.BitwiseXor, "^");
                 }
-            } else if (c === '&') {
-                if (this.match_char('=')) {
+            } else if (c === "&") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.BitwiseAndEqual, "&=");
                 }
-                if (this.match_char('&')) {
+                if (this.match_char("&")) {
                     this.addToken(TokenKind.LogicAnd, "&&");
                 } else {
                     this.addToken(TokenKind.BitwiseAnd, "&");
                 }
-            } else if (c === '|') {
-                if (this.match_char('=')) {
+            } else if (c === "|") {
+                if (this.match_char("=")) {
                     this.addToken(TokenKind.BitwiseOrEqual, "|=");
                 }
-                if (this.match_char('|')) {
+                if (this.match_char("|")) {
                     this.addToken(TokenKind.LogicOr, "||");
                 } else {
                     this.addToken(TokenKind.BitwiseOr, "|");
                 }
-            } else if (c === '"') {
+            } else if (c === "\"") {
                 let str = "";
-                while (this.chars[this.current+1] !== '"') {
+                while (this.chars[this.current+1] !== "\"") {
                     const next = this.advance();
                     if (next) {
                         str += next;
@@ -258,7 +258,7 @@ export class Lexer {
     }
     
     private is_digit(char: string): boolean {
-        return char >= '0' && char <= '9';
+        return char >= "0" && char <= "9";
     }
 
     private is_alphabetic(char: string): boolean {
