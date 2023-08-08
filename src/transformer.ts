@@ -262,12 +262,18 @@ export class Transformer {
             const arms: SwitchArm[] = [];
 
             for (const arm of expr.arms) {
+                const e = this.expr(arm.body);
+                if (isError(e)) return e;
+
+                const body = this.expr(arm.body);
+                if (isError(body)) return body;
+
                 arms.push({
-                    expr: arm.expr,
+                    expr: e,
                     body: {
                         kind: StmtKind.Expr,
-                        expr: arm.body,
-                        span: arm.body.span
+                        expr: body,
+                        span: body.span
                     },
                     span: arm.span,
                 });
@@ -305,10 +311,10 @@ export class Transformer {
                         kind: ErrorKind.UpdateLater,
                         message: "expected object",
                         position: expr.args[0].span.start,
-                    }
+                    };
                 }
 
-                return expr.args[0];
+                return this.expr(expr.args[0]);
             }
 
             const args: typeof expr.args = [];
