@@ -13,33 +13,35 @@ import {
 } from "./lib.ts";
 
 
+type Visitors = {
+    stmt: Record<StmtKind, (t: Stmt) => Stmt>,
+    expr: Record<ExprKind, (t: Expr) => Expr>,
+};
+
 export class Traverser {
     ast: AST;
+    visitors: Visitors;
     errors: Error[] = [];
 
-    constructor(ast: AST) {
+    constructor(ast: AST, visitors: Visitors) {
         this.ast = ast;
+        this.visitors = visitors;
+        
         return this;
     }
 
-    traverse_stmt(stmt_kind: StmtKind, method: (stmt: Stmt) => Stmt): Result<void> {
+    public traverse() {
         for (const i in this.ast.stmts) {
             const stmt = this.ast.stmts[i];
             
-            if (stmt.kind === stmt_kind) {
-                this.ast.stmts[i] = method(stmt);
-            }
+            const method = this.visitors.stmt[stmt.kind];
+            if (method) method(stmt);
+            
+            this.expr_from_stmt(stmt);
         }
     }
 
-    traverse_expr(expr_kind: ExprKind, method: (expr: Expr) => Expr): Result<void> {
-        for (const i in this.ast.stmts) {
-            const stmt = this.ast.stmts[i];
-            this.find_expr(stmt, expr_kind, method);
-        }
-    }
-
-    private find_expr(stmt: Stmt, expr_kind: ExprKind, method: (expr: Expr) => Expr) {
+    private expr_from_stmt(stmt: Stmt) {
         let expr: Expr | undefined;
 
         if (stmt.kind === StmtKind.Expr) {
@@ -49,10 +51,8 @@ export class Traverser {
         } else if (stmt.kind === StmtKind.While) {
             expr = stmt.condition;
 
-            if (stmt.block.kind === expr_kind) {
-                for (const b of stmt.block.stmts) {
-                    this.find_expr(b, expr_kind, method);
-                }
+            for (const b of stmt.block.stmts) {
+                this.expr_from_stmt(b);
             }
         } else if (stmt.kind === StmtKind.For) {
             expr = stmt.iter;
@@ -61,28 +61,23 @@ export class Traverser {
         } else if (stmt.kind === StmtKind.Const) {
             expr = stmt.init;
         } else if (stmt.kind === StmtKind.Fn) {
-            if (stmt.block.kind === expr_kind) {
-                for (const b of stmt.block.stmts) {
-                    this.find_expr(b, expr_kind, method);
-                }
+            for (const b of stmt.block.stmts) {
+                this.expr_from_stmt(b);
             }
         } else if (stmt.kind === StmtKind.Impl) {
             for (const m of stmt.methods) {
                 for (const b of m.block?.stmts) {
-                    this.find_expr(b, expr_kind, method);
+                    this.expr_from_stmt(b);
                 }
             }
         } else if (stmt.kind === StmtKind.Assign) {
-            if (stmt.expr.kind === expr_kind) {
-                method(stmt.expr);
-            }
+            this.visitors.expr[stmt.expr.kind](stmt.expr);
 
             expr = stmt.value;
         }
 
-        
-        if (expr?.kind === expr_kind) {
-            method(expr);
+        if (expr) {
+            this.visitors.expr[expr.kind](expr);
         }
     }
 }

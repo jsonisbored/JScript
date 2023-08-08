@@ -4,3 +4,4 @@ export * from "./parser.ts";
 export * from "./transformer.ts";
 export * from "./checker.ts";
 export * from "./generator.ts";
+export * from "./traverser.ts";
