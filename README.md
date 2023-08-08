@@ -7,3 +7,7 @@ This is my first attempt at building a programming language. It's been a lot of 
 
 ### Architecture Overview
 Source > Tokens > AST > Semantic checks > Transformer > Generator
+
+### Changes in rewrite
+A single error breaks the flow of parsing.
+Error handing and messages.
