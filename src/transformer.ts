@@ -317,11 +317,11 @@ export class Transformer {
                 return this.expr(expr.args[0]);
             }
 
-            const args: typeof expr.args = [];
+            const args: Expr[] = [];
             for (const a of expr.args) {
                 const arg = this.expr(a);
                 if (isError(arg)) return arg;
-                args.push(a);
+                args.push(arg);
             }
 
             const func = this.expr(expr.func);
