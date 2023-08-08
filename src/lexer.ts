@@ -80,7 +80,7 @@ export class Lexer {
                 } else {
                     this.addToken(TokenKind.Dot, ".");
                 }
-            }else if (c === "(") {
+            } else if (c === "(") {
                 this.addToken(TokenKind.LeftParen, "(");
             } else if (c === ")") { 
                 this.addToken(TokenKind.RightParen, ")");
@@ -106,7 +106,7 @@ export class Lexer {
                 }
             } else if (c === "/") {
                 if (this.match_char("/")) {
-                    while (this.chars[this.current] !== "\n") {
+                    while (this.chars[this.current] !== "\n" && this.current < this.chars.length) {
                         this.advance();
                     }
                 } else if (this.match_char("*")) {
