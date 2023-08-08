@@ -1,8 +1,8 @@
 
 
-console.log(NewsArticle({
+console.log({
     content: "BREAKING NEWS!",
-}).to_string());
+}.to_string());
 
 switch (result) {
     case Option.Some(val): 
