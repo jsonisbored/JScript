@@ -2,6 +2,7 @@ import {
     AST,
 
     BlockExpr,
+    FalsyExpr,
 
     Expr,
     ExprKind,
@@ -64,7 +65,7 @@ export class Transformer {
                 for (const arm of stmt.expr.arms) {
                     arms.push({
                         body: {
-                            kind: StmtKind.Return,
+                            kind: stmt.kind,
                             expr: arm.body,
                             span: arm.span,
                         },
@@ -74,7 +75,7 @@ export class Transformer {
                 }
 
                 return {
-                    kind: StmtKind.Expr,
+                    kind: stmt.kind,
                     expr: {
                         kind: ExprKind.Switch,
                         arms: arms,
@@ -105,7 +106,7 @@ export class Transformer {
             }
 
             return {
-                kind: StmtKind.Struct,
+                kind: stmt.kind,
                 name: stmt.name,
                 fields: stmt.fields,
                 span: stmt.span,
@@ -127,7 +128,7 @@ export class Transformer {
             if (isError(block)) return block;
 
             return {
-                kind: StmtKind.While,
+                kind: stmt.kind,
                 condition: condition,
                 block: block as BlockExpr,
                 span: stmt.span,
@@ -140,7 +141,7 @@ export class Transformer {
             if (isError(block)) return block;
 
             return {
-                kind: StmtKind.For,
+                kind: stmt.kind,
                 name: stmt.name,
                 iter: iter,
                 block: block as BlockExpr,
@@ -151,7 +152,7 @@ export class Transformer {
             if (isError(init)) return init;
 
             return {
-                kind: StmtKind.Let,
+                kind: stmt.kind,
                 name: stmt.name,
                 type: stmt.type,
                 init: init,
@@ -163,7 +164,7 @@ export class Transformer {
             if (isError(init)) return init;
 
             return {
-                kind: StmtKind.Const,
+                kind: stmt.kind,
                 name: stmt.name,
                 type: stmt.type,
                 init: init,
@@ -174,13 +175,13 @@ export class Transformer {
             if (isError(block)) return block;
 
             return {
-                kind: StmtKind.Fn,
+                kind: stmt.kind,
                 type: stmt.type,
                 block: block as BlockExpr,
                 span: stmt.span,
             };
         } else if (stmt.kind === StmtKind.Impl) {
-            const methods: typeof stmt["methods"] = [];
+            const methods: typeof stmt.methods = [];
             for (const meth of stmt.methods) {
                 const b = this.expr(meth.block);
                 if (isError(b)) return b;
@@ -194,14 +195,14 @@ export class Transformer {
             }
 
             return {
-                kind: StmtKind.Impl,
+                kind: stmt.kind,
                 impl_name: stmt.impl_name,
                 for_name: stmt.for_name,
                 methods: methods,
                 span: stmt.span,
             };
         } else if (stmt.kind === StmtKind.Trait) {
-            const methods: typeof stmt["methods"] = [];
+            const methods: typeof stmt.methods = [];
             for (const meth of stmt.methods) {
                 const b = meth.block ? this.expr(meth.block) : undefined;
                 if (isError(b)) return b;
@@ -213,7 +214,7 @@ export class Transformer {
             }
 
             return {
-                kind: StmtKind.Trait,
+                kind: stmt.kind,
                 name: stmt.name,
                 methods: methods,
                 span: stmt.span,
@@ -226,8 +227,8 @@ export class Transformer {
             if (isError(value)) return value;
 
             return {
-                kind: StmtKind.Assign,
-                expr: expr as typeof stmt["expr"],
+                kind: stmt.kind,
+                expr: expr as typeof stmt.expr,
                 operator: stmt.operator,
                 value: value,
                 span: stmt.span,
@@ -272,9 +273,12 @@ export class Transformer {
                 });
             }
 
+            const e = this.expr(expr.expr);
+            if (isError(e)) return e;
+
             return {
                 kind: ExprKind.Switch,
-                expr: expr.expr,
+                expr: e,
                 arms: arms,
                 span: expr.span,
             };
@@ -284,9 +288,10 @@ export class Transformer {
             for (let level = this.scope_level; level >= 0; -- level) {
                 const scope = this.scopes[level];
 
-                struct = scope.structs.find(s => 
-                    (expr.func.kind === ExprKind.Ident) && 
-                    s.name === expr.func.ident.value);
+                if (expr.func.kind === ExprKind.Ident) {
+                    const ident = expr.func.ident.value;
+                    struct = scope.structs.find(s => s.name === ident);
+                }
 
                 if (struct) {
                     break;
@@ -313,13 +318,141 @@ export class Transformer {
                 args.push(a);
             }
 
+            const func = this.expr(expr.func);
+            if (isError(func)) return func;
+            
             return {
                 kind: expr.kind,
                 args: args,
-                func: expr.func,
+                func: func,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.Object) {
+            const props: typeof expr.props = [];
+            for (const p of expr.props) {
+                const v = this.expr(p.value);
+                if (isError(v)) return v;
+
+                props.push({
+                    key: p.key,
+                    value: v,
+                });
+            }
+
+            return {
+                kind: expr.kind,
+                props: props,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.GetField) {
+            const e = this.expr(expr.expr);
+            if (isError(e)) return e;
+
+            return {
+                kind: expr.kind,
+                expr: e,
+                field: expr.field,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.GetIndex) {
+            const e = this.expr(expr.expr);
+            if (isError(e)) return e;
+
+            const index = this.expr(expr.expr);
+            if (isError(index)) return index;
+
+            return {
+                kind: expr.kind,
+                expr: e,
+                index: index,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.Lambda) {
+            const block = this.expr(expr.block);
+            if (isError(block)) return block;
+
+            return {
+                kind: expr.kind,
+                params: expr.params,
+                return_type: expr.return_type,
+                block: block as BlockExpr,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.Unary) {
+            const e = this.expr(expr.expr);
+            if (isError(e)) return e;
+
+            return {
+                kind: expr.kind,
+                operator: expr.operator,
+                expr: e,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.Binary) {
+            const l = this.expr(expr.left);
+            if (isError(l)) return l;
+
+            const r = this.expr(expr.left);
+            if (isError(r)) return r;
+
+            return {
+                kind: expr.kind,
+                operator: expr.operator,
+                left: l,
+                right: r,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.Group) {
+            const e = this.expr(expr.expr);
+            if (isError(e)) return e;
+
+            return {
+                kind: expr.kind,
+                expr: e,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.Switch) { // Shouldn't happen, but just in case
+            const arms: SwitchArm[] = [];
+
+            for (const arm of expr.arms) {
+                const body = this.stmt(arm.body);
+                if (isError(body)) return body;
+
+                arms.push({
+                    expr: arm.expr,
+                    body: body,
+                    span: arm.span,
+                });
+            }
+
+            const e = this.expr(expr.expr);
+            if (isError(e)) return e;
+
+            return {
+                kind: ExprKind.Switch,
+                expr: e,
+                arms: arms,
+                span: expr.span,
+            };
+        } else if (expr.kind === ExprKind.If) {
+            const condition = this.expr(expr.condition);
+            if (isError(condition)) return condition;
+            
+            const then = this.expr(expr.condition);
+            if (isError(then)) return then;
+
+            const e = expr.else ? this.expr(expr.else) : undefined;
+            if (isError(e)) return e;
+
+            return {
+                kind: expr.kind,
+                condition: then as FalsyExpr,
+                then: then as BlockExpr,
+                else: e as typeof expr.else,
                 span: expr.span,
             };
         }
+        
 
         return expr;
     }

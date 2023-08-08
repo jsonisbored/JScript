@@ -179,18 +179,18 @@ export type Expr =
     | NumberExpr
     | StringExpr
     | CallExpr
-    | CallInterfaceExpr
+    // | CallInterfaceExpr
     | ObjectExpr
     | GetFieldExpr
     | GetIndexExpr
     | LambdaExpr
     | UnaryExpr
     | BinaryExpr
-    | TypeCastExpr
+    // | TypeCastExpr
     | GroupExpr
     | MatchExpr
     | SwitchExpr
     | IdentExpr
     | BlockExpr
     | IfExpr
-    | MacroExpr;
+    // | MacroExpr;
