@@ -262,7 +262,7 @@ export class Transformer {
             const arms: SwitchArm[] = [];
 
             for (const arm of expr.arms) {
-                const e = this.expr(arm.body);
+                const e = this.expr(arm.expr);
                 if (isError(e)) return e;
 
                 const body = this.expr(arm.body);
