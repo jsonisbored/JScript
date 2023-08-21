@@ -19,8 +19,10 @@ import {
     ErrorOrigin,
 } from "./lib.ts";
 
+
 interface Scope {
     structs: Array<{ name: string }>,
+    impl: Array<{ impl_name: string, for_name?: string }>,
 }
 
 
@@ -28,7 +30,7 @@ export class Transformer {
     ast: AST;
     errors: Error[] = [];
 
-    private scopes: Scope[] = [{ structs: [] }];
+    private scopes: Scope[] = [{ structs: [], impl: [] }];
     private scope_level = 0;
 
     constructor(ast: AST) {
@@ -181,6 +183,24 @@ export class Transformer {
                 span: stmt.span,
             };
         } else if (stmt.kind === StmtKind.Impl) {
+            let impl;
+            for (let level = this.scope_level; level >= 0; level --) {
+                const scope = this.scopes[level];
+                impl = scope.impl.find(s => s.impl_name === stmt.impl_name.value);
+                if (impl) {
+                    break;
+                }
+            }
+
+            if (!impl) {
+                this.scopes[this.scope_level].impl.push({
+                    impl_name: stmt.impl_name.value,
+                    for_name: stmt.for_name?.value
+                });
+            } else {
+                console.log("impl already exists");
+            }
+
             const methods: typeof stmt.methods = [];
             for (const meth of stmt.methods) {
                 const b = this.expr(meth.block);
@@ -459,7 +479,6 @@ export class Transformer {
             };
         }
         
-
         return expr;
     }
 }
