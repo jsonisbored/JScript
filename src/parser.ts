@@ -85,7 +85,7 @@ export class Parser {
         if (!isError(stmt)) return stmt;
         stmt = this.enum_decl();
         if (!isError(stmt)) return stmt;
-        stmt = this.type_decl();
+        stmt = this.struct_decl();
         if (!isError(stmt)) return stmt;
         stmt = this.impl_decl();
         if (!isError(stmt)) return stmt;
@@ -188,9 +188,9 @@ export class Parser {
         });
     }
 
-    private type_decl(): Result<StructStmt> {
-        if (!this.match(TokenKind.Type)) {
-            return this.error(TokenKind.Type);
+    private struct_decl(): Result<StructStmt> {
+        if (!this.match(TokenKind.Struct)) {
+            return this.error(TokenKind.Struct);
         }
         
         const name = this.consume(TokenKind.Ident);
