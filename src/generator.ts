@@ -138,6 +138,10 @@ export class Generator {
             }
             output += "    ".repeat(this.depth);
             output += "\n}";
+        } else if (expr.kind == ExprKind.Path) {
+            output += this.expr(expr.left);
+            output += ".";
+            output += this.expr(expr.right);
         }
 
         return output;
