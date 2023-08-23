@@ -38,7 +38,6 @@ import {
     ObjectExpr,
 
     AST,
-    Span,
 } from "./types/mod.ts";
 
 
@@ -511,7 +510,6 @@ export class Parser {
     }
 
     private assign_or_expr_stmt(): Result<AssignStmt | ExprStmt | ReturnStmt> {
-        const start = this.current;
         const expr = this.any_expr();
         if (isError(expr)) return expr;
 
