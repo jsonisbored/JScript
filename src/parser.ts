@@ -61,13 +61,13 @@ export class Parser {
 
         while (this.current < this.tokens.length-1) {
             const decl = this.decl_stmt();
-            // console.log(decl);
             if (isError(decl)) {
                 this.errors.push(decl);
                 this.current ++;
             } else {
                 stmts.push(decl);
             }
+            // console.dir(stmts, { depth: 10 });
         }
 
         return {
@@ -136,7 +136,7 @@ export class Parser {
         if (!this.match(TokenKind.Fn)) {
             return this.error(TokenKind.Fn);
         }
-
+        
         const type = this.fn_type();
         if (isError(type)) return type;
 
@@ -196,9 +196,9 @@ export class Parser {
         const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
 
-        if (!this.match(TokenKind.Equal)) {
-            return this.error(TokenKind.Equal);
-        }
+        // if (!this.match(TokenKind.Equal)) {
+        //     return this.error(TokenKind.Equal);
+        // }
 
         if (!this.match(TokenKind.LeftBrace)) {
             return this.error(TokenKind.LeftBrace);
@@ -254,7 +254,7 @@ export class Parser {
 
             methods.push(decl);
 
-            if (this.match([TokenKind.Comma, TokenKind.RightBrace])) {
+            if (this.match(TokenKind.RightBrace)) {
                 break;
             }
         }
@@ -281,11 +281,17 @@ export class Parser {
 
         const methods: TraitStmt["methods"] = [];
         while (!this.match(TokenKind.RightBrace)) {
+            if (!this.match(TokenKind.Fn)) {
+                return this.error(TokenKind.Fn);
+            }
+            
             const type = this.fn_type();
             if (isError(type)) return type;
+            
+            const b = this.block_expr();
+            const block = isError(b) ? undefined : b;
 
-            const block = this.block_expr();
-            if (isError(block)) return block;
+            if (!block) this.match(TokenKind.Semicolon);
 
             methods.push({ type, block });
         }
@@ -306,10 +312,11 @@ export class Parser {
 
         const name = this.consume(TokenKind.Ident);
         if (isError(name)) return name;
-
+        
         const type = this.match(TokenKind.Colon)
             ? this.consume_type()
             : undefined;
+
         if (isError(type)) return type;
         if (!type) return {
             origin: ErrorOrigin.Parser,
@@ -350,10 +357,7 @@ export class Parser {
         stmt = this.return_stmt();
         if (!isError(stmt)) return stmt;
 
-        const expr_stmt = this.expr_stmt();
-        if (!isError(expr_stmt)) return expr_stmt;
-
-        return this.assign_stmt();
+        return this.assign_or_expr_stmt();
     }
 
     private while_stmt(): Result<WhileStmt> {
@@ -446,10 +450,25 @@ export class Parser {
         });
     }
 
-    private assign_stmt(): Result<AssignStmt> {
+    private assign_or_expr_stmt(): Result<AssignStmt | ExprStmt | ReturnStmt> {
         const expr = this.any_expr();
         if (isError(expr)) return expr;
 
+        if (this.match(TokenKind.Semicolon)) {
+            return {
+                kind: StmtKind.Expr,
+                expr,
+                span: {
+                    start: expr.span.start,
+                    end: this.tokens[this.current-1].span.end,
+                },
+            };
+        }
+
+        return this.assign_stmt(expr);
+    }
+
+    private assign_stmt(expr: Expr): Result<AssignStmt> {
         if (this.match([
             TokenKind.Equal,
             TokenKind.SlashEqual,
@@ -464,6 +483,10 @@ export class Parser {
             const operator = this.tokens[this.current-1];
             const value = this.any_expr();
             if (isError(value)) return value;
+
+            if (!this.match(TokenKind.Semicolon)) {
+                return this.error(TokenKind.Semicolon);
+            }
 
             if (
                 expr.kind === ExprKind.Ident ||
@@ -495,24 +518,6 @@ export class Parser {
             kind: ErrorKind.UnexpectedToken,
             message: "Expected assign statement",
             position: this.tokens[this.current].span.start,
-        };
-    }
-
-    private expr_stmt(): Result<ExprStmt | ReturnStmt> {
-        const expr = this.any_expr();
-        if (isError(expr)) return expr;
-        
-        if (!this.match(TokenKind.Semicolon)) {
-            return this.error(TokenKind.Semicolon);
-        }
-
-        return {
-            kind: StmtKind.Expr,
-            expr,
-            span: {
-                start: expr.span.start,
-                end: this.tokens[this.current-1].span.end,
-            },
         };
     }
 
@@ -591,10 +596,7 @@ export class Parser {
 
 
     private any_expr(): Result<Expr> {
-        const expr = this.operation_expr();
-        if (isError(expr)) return expr;
-
-        return expr;
+        return this.operation_expr();
     }
 
     private blocky_expr(): Result<BlockExpr | ObjectExpr> {
@@ -926,6 +928,25 @@ export class Parser {
             if (this.check(TokenKind.Ident)) {}
 
             return this.operation_expr(precedence+1);
+        } else if (precedence === 20) { // Path. `Animal::new`
+            let expr = this.operation_expr(precedence+1);
+
+            if (expr.kind !== ExprKind.Ident && expr.kind !== ExprKind.Path) {
+                return expr;
+            }
+
+            while (this.match(TokenKind.ColonColon)) {
+                const e = this.any_expr();
+                if (isError(e)) return e;
+                
+                expr = this.node({
+                    kind: ExprKind.Path,
+                    left: expr,
+                    right: e,
+                });
+            }
+
+            return expr;
         } else {
             return this.scalar_expr();
         }
@@ -962,7 +983,7 @@ export class Parser {
     private match(expected: TokenKind | TokenKind[]): boolean {
         if (!expected.includes(this.tokens[this.current]?.kind)) return false;
 
-        this.current += Array.isArray(expected) ? expected.length : 1;
+        this.current ++;
 
         return true;
     }
@@ -985,7 +1006,7 @@ export class Parser {
         return t;
     }
 
-    private node<T extends Omit<Stmt|Expr, "span">>(node: T): { span: Span } & T { 
+    private node<T extends Omit<Stmt|Expr, "span">>(node: T): { span: Span } & T {
         const out = {
             ...node,
             span: {

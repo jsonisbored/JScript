@@ -1,13 +1,9 @@
 
 
-console.log({
-    content: "BREAKING NEWS!",
-}.to_string());
 
-switch (result) {
-    case Option.Some(val): 
-        console.log(val);
-    case Option.None: 
-        console.log("none");
-};
-
+function main(): undefined {
+    let dolly: Sheep = ;
+    dolly.talk();
+    dolly.shear();
+    dolly.talk();
+}

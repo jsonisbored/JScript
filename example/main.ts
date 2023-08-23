@@ -39,7 +39,7 @@ const { ast, errors: _errors } = new Parser(tokens).parse();
 parser();
 // console.dir(ast, { depth: 15, });
 
-function format_error(e: Error): string {
+function _format_error(e: Error): string {
     return `${input.slice(e.position-50, e.position)}\n${e.message}`;
 }
 // console.log(_errors.map(format_error));

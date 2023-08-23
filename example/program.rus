@@ -5,26 +5,26 @@ trait Animal {
     fn new(name: str): Self;
 
     // Method signatures; these will return a string.
-    fn name(self): str;
-    fn noise(self): str;
+    fn name(self: Self): str;
+    fn noise(self: Self): str;
 
     // Traits can provide default method definitions.
-    fn talk(self) {
-        println!("{} says {}", self.name(), self.noise());
+    fn talk(self: Self) {
+        println("{} says {}", self.name(), self.noise());
     }
 }
 
 impl Sheep {
-    fn is_naked(self): bool {
+    fn is_naked(self: Self): bool {
         self.naked
     }
 
-    fn shear(mut self) {
+    fn shear(mut self: Self) {
         if self.is_naked() {
             // Implementor methods can use the implementor's trait methods.
-            println!("{} is already naked...", self.name());
+            println("{} is already naked...", self.name());
         } else {
-            println!("{} gets a haircut!", self.name);
+            println("{} gets a haircut!", self.name);
 
             self.naked = true;
         }
@@ -35,14 +35,14 @@ impl Sheep {
 impl Animal for Sheep {
     // `Self` is the implementor type: `Sheep`.
     fn new(name: str): Sheep {
-        Sheep { name: name, naked: false }
+        Sheep({ name: name, naked: false })
     }
 
-    fn name(self): str {
+    fn name(self: Self): str {
         self.name
     }
 
-    fn noise(self): str {
+    fn noise(self: Self): str {
         if self.is_naked() {
             "baaaaah?"
         } else {
@@ -51,9 +51,9 @@ impl Animal for Sheep {
     }
     
     // Default trait methods can be overridden.
-    fn talk(self) {
+    fn talk(self: Self) {
         // For example, we can add some quiet contemplation.
-        println!("{} pauses briefly... {}", self.name, self.noise());
+        println("{} pauses briefly... {}", self.name, self.noise());
     }
 }
 
@@ -65,4 +65,4 @@ fn main() {
     dolly.talk();
     dolly.shear();
     dolly.talk();
-}
+};
