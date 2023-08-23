@@ -98,6 +98,7 @@ export class Parser {
     }
 
     private const_decl(): Result<ConstStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Const)) {
             return this.error(TokenKind.Const);
         }
@@ -124,15 +125,20 @@ export class Parser {
         const semi = this.consume(TokenKind.Semicolon);
         if (isError(semi)) return semi;
 
-        return this.node({
+        return {
             name,
             kind: StmtKind.Const,
             type,
             init,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private fn_decl(): Result<FnStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Fn)) {
             return this.error(TokenKind.Fn);
         }
@@ -143,14 +149,19 @@ export class Parser {
         const block = this.block_expr();
         if (isError(block)) return block;
 
-        return this.node({
+        return {
             kind: StmtKind.Fn,
             type,
             block,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private enum_decl(): Result<EnumStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Enum)) {
             return this.error(TokenKind.Enum);
         }
@@ -181,14 +192,19 @@ export class Parser {
             fields.push({ name, types });
         }
 
-        return this.node({
+        return {
             kind: StmtKind.Enum,
             name,
             fields,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private struct_decl(): Result<StructStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Struct)) {
             return this.error(TokenKind.Struct);
         }
@@ -223,14 +239,19 @@ export class Parser {
             fields.push({ name, type });
         }
 
-        return this.node({
+        return {
             kind: StmtKind.Struct,
             name,
             fields,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private impl_decl(): Result<ImplStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Impl)) {
             return this.error(TokenKind.Impl);
         }
@@ -259,15 +280,20 @@ export class Parser {
             }
         }
 
-        return this.node({
+        return {
             kind: StmtKind.Impl,
             impl_name,
             for_name,
             methods,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private trait_decl(): Result<TraitStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Trait)) {
             return this.error(TokenKind.Trait);
         }
@@ -296,14 +322,19 @@ export class Parser {
             methods.push({ type, block });
         }
 
-        return this.node({
+        return {
             kind: StmtKind.Trait,
             name,
             methods,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private let_decl(): Result<LetStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Let)) {
             return this.error(TokenKind.Let);
         }
@@ -334,13 +365,17 @@ export class Parser {
             return this.error(TokenKind.Semicolon);
         }
 
-        return this.node({
+        return {
             kind: StmtKind.Let,
             mut,
             name,
             type,
             init,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
 
@@ -361,6 +396,7 @@ export class Parser {
     }
 
     private while_stmt(): Result<WhileStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.While)) {
             return this.error(TokenKind.While);
         }
@@ -371,14 +407,19 @@ export class Parser {
         const block = this.block_expr();
         if (isError(block)) return block;
 
-        return this.node({
+        return {
             kind: StmtKind.While,
             condition,
             block,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private for_stmt(): Result<ForStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.For)) {
             return this.error(TokenKind.For);
         }
@@ -394,15 +435,20 @@ export class Parser {
         const block = this.block_expr();
         if (isError(block)) return block;
 
-        return this.node({
+        return {
             kind: StmtKind.For,
             name,
             iter,
             block,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
     
     private break_stmt(): Result<BreakStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Break)) {
             return this.error(TokenKind.Break);
         }
@@ -411,12 +457,17 @@ export class Parser {
             return this.error(TokenKind.Semicolon);
         }
 
-        return this.node({
+        return {
             kind: StmtKind.Break,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private continue_stmt(): Result<ContinueStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Continue)) {
             return this.error(TokenKind.Continue);
         }
@@ -425,12 +476,17 @@ export class Parser {
             return this.error(TokenKind.Semicolon);
         }
 
-        return this.node({
+        return {
             kind: StmtKind.Continue,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private return_stmt(): Result<ReturnStmt> {
+        const start = this.current;
         if (!this.match(TokenKind.Return)) {
             return this.error(TokenKind.Return);
         }
@@ -444,13 +500,18 @@ export class Parser {
             return this.error(TokenKind.Semicolon);
         }
 
-        return this.node({
+        return {
             kind: StmtKind.Return,
             expr,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private assign_or_expr_stmt(): Result<AssignStmt | ExprStmt | ReturnStmt> {
+        const start = this.current;
         const expr = this.any_expr();
         if (isError(expr)) return expr;
 
@@ -614,6 +675,7 @@ export class Parser {
     }
 
     private block_expr(): Result<BlockExpr> {
+        const start = this.current;
         if (!this.match(TokenKind.LeftBrace)) {
             return this.error(TokenKind.LeftBrace);
         }
@@ -633,13 +695,18 @@ export class Parser {
             return this.error(TokenKind.RightBrace);
         }
         
-        return this.node({
+        return {
             kind: ExprKind.Block,
             stmts,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private object_expr(): Result<ObjectExpr> {
+        const start = this.current;
         if (!this.match(TokenKind.LeftBrace)) {
             return this.error(TokenKind.LeftBrace);
         }
@@ -668,13 +735,18 @@ export class Parser {
             return this.error(TokenKind.RightBrace);
         }
 
-        return this.node({
+        return {
             kind: ExprKind.Object,
             props,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private if_expr(): Result<IfExpr> {
+        const start = this.current;
         if (!this.match(TokenKind.If)) {
             return this.error(TokenKind.If);
         }
@@ -712,15 +784,20 @@ export class Parser {
         if (isError(else_stmt)) return else_stmt;
 
 
-        return this.node({
+        return {
             kind: ExprKind.If,
             condition,
             then: then_stmt,
             else: else_stmt,
-        });
+            span: {
+                start,
+                end: this.current,
+            },
+        };
     }
 
     private operation_expr(precedence = 0): Result<Expr> {
+        const start = this.current;
         if (precedence <= 9) { // Binary expression. `1+1` or `foo != bar`
             let expr = this.operation_expr(precedence+1);
             if (isError(expr)) return expr;
@@ -743,12 +820,16 @@ export class Parser {
                 const right = this.operation_expr(precedence+1);
                 if (isError(right)) return right;
 
-                expr = this.node({
+                expr = {
                     kind: ExprKind.Binary,
                     left: expr,
                     operator,
                     right,
-                });
+                    span: {
+                        start,
+                        end: this.current,
+                    },
+                };
             }
 
             return expr;
@@ -776,11 +857,15 @@ export class Parser {
                 const expr = this.operation_expr(precedence+1);
                 if (isError(expr)) return expr;
 
-                return this.node({
+                return {
                     kind: ExprKind.Unary,
                     operator,
                     expr,
-                });
+                    span: {
+                        start,
+                        end: this.current,
+                    },
+                };
             }
 
             return this.operation_expr(precedence+1);
@@ -806,11 +891,15 @@ export class Parser {
 
                 if (isError(expr)) return expr;
 
-                return this.node({
+                return {
                     kind: ExprKind.Call,
                     func: expr,
                     args,
-                });
+                    span: {
+                        start,
+                        end: this.current,
+                    },
+                };
             }
 
             return expr;
@@ -825,11 +914,15 @@ export class Parser {
 
                     if (!this.match(TokenKind.RightBracket)) return this.error(TokenKind.RightBracket);
                     
-                    expr = this.node({
+                    expr = {
                         kind: ExprKind.GetIndex,
                         expr,
                         index,
-                    });
+                        span: {
+                            start,
+                            end: this.current,
+                        },
+                    };
                 }
                 
                 return expr;
@@ -840,11 +933,15 @@ export class Parser {
                     const field = this.consume(TokenKind.Ident);
                     if (isError(field)) return field;
                     
-                    expr = this.node({
+                    expr = {
                         kind: ExprKind.GetField,
                         expr,
                         field,
-                    });
+                        span: {
+                            start,
+                            end: this.current,
+                        },
+                    };
                 }
                 
                 return expr;
@@ -902,11 +999,15 @@ export class Parser {
                     return this.error(TokenKind.RightBrace);
                 }
 
-                return this.node({
+                return {
                     kind: ExprKind.Match,
                     expr,
                     arms,
-                });
+                    span: {
+                        start,
+                        end: this.current,
+                    },
+                };
             }
 
             return this.operation_expr(precedence+1);
@@ -939,11 +1040,15 @@ export class Parser {
                 const e = this.any_expr();
                 if (isError(e)) return e;
                 
-                expr = this.node({
+                expr = {
                     kind: ExprKind.Path,
                     left: expr,
                     right: e,
-                });
+                    span: {
+                        start,
+                        end: this.current,
+                    },
+                };
             }
 
             return expr;
@@ -953,12 +1058,54 @@ export class Parser {
     }
 
     private scalar_expr(): Result<Expr> {
+        const start = this.current;
         const t = this.tokens[this.current];
-        if (this.match(TokenKind.False)) return this.node({ kind: ExprKind.Boolean, value: false });
-        if (this.match(TokenKind.True)) return this.node({ kind: ExprKind.Boolean, value: true });
-        if (this.match(TokenKind.Number)) return this.node({ kind: ExprKind.Number, value: <number><unknown>t.value });
-        if (this.match(TokenKind.String)) return this.node({ kind: ExprKind.String, value: <string>t.value });
-        if (this.match(TokenKind.Ident)) return this.node({ kind: ExprKind.Ident, ident: t });
+        if (this.match(TokenKind.False)) {
+            return {
+                kind: ExprKind.Boolean,
+                value: false,
+                span: {
+                    start,
+                    end: this.current,
+                },
+            };
+        } else if (this.match(TokenKind.True)) {
+            return {
+                kind: ExprKind.Boolean,
+                value: true,
+                span: {
+                    start,
+                    end: this.current,
+                },
+            };
+        } else if (this.match(TokenKind.Number)) {
+            return {
+                kind: ExprKind.Number,
+                value: <number><unknown>t.value,
+                span: {
+                    start,
+                    end: this.current,
+                },
+            };
+        } else if (this.match(TokenKind.String)) {
+            return {
+                kind: ExprKind.String,
+                value: <string>t.value,
+                span: {
+                    start,
+                    end: this.current,
+                },
+            };
+        } else if (this.match(TokenKind.Ident)) {
+            return {
+                kind: ExprKind.Ident,
+                ident: t,
+                span: {
+                    start,
+                    end: this.current,
+                },
+            };
+        }
 
         return {
             origin: ErrorOrigin.Parser,
@@ -1006,17 +1153,17 @@ export class Parser {
         return t;
     }
 
-    private node<T extends Omit<Stmt|Expr, "span">>(node: T): { span: Span } & T {
-        const out = {
-            ...node,
-            span: {
-                start: this.tokens[this.start].span.start,
-                end: this.tokens[this.current-1].span.end,
-            },
-        };
+    // private node<T extends Omit<Stmt|Expr, "span">>(node: T): { span: Span } & T {
+    //     const out = {
+    //         ...node,
+    //         span: {
+    //             start: this.tokens[this.start].span.start,
+    //             end: this.tokens[this.current-1].span.end,
+    //         },
+    //     };
+        
+    //     this.start = this.current;
 
-        this.start = this.current;
-
-        return out;
-    }
+    //     return out;
+    // }
 }

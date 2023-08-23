@@ -65,4 +65,4 @@ fn main() {
     dolly.talk();
     dolly.shear();
     dolly.talk();
-};
+}
