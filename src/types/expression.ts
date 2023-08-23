@@ -27,6 +27,7 @@ export enum ExprKind {
     Object          = "Object",
     If              = "If",
     Macro           = "Macro",
+    Path            = "Path",
 }
 
 export interface BooleanExpr {
@@ -161,6 +162,12 @@ export interface MacroExpr {
     expr: Expr,
     span: Span,
 }
+export interface PathExpr {
+    kind: ExprKind.Path,
+    left: IdentExpr | PathExpr,
+    right: Expr,
+    span: Span,
+}
 
 
 export type FalsyExpr =
@@ -193,4 +200,5 @@ export type Expr =
     | IdentExpr
     | BlockExpr
     | IfExpr
+    | PathExpr;
     // | MacroExpr;
