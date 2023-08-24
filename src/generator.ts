@@ -18,7 +18,7 @@ export class Generator {
     generate(): string {
         let output = "";
         for (const stmt of this.ast.stmts) {
-            output += this.stmt(stmt) + "\n";
+            output += this.stmt(stmt);
         }
 
         return output;
