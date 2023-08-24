@@ -57,12 +57,10 @@ impl Animal for Sheep {
     }
 }
 
-fn main() {
-    // Type annotation is necessary in this case.
-    let mut dolly: Sheep = Animal::new("Dolly");
-    // TODO ^ Try removing the type annotations.
+// Type annotation is necessary in this case.
+let mut dolly: Sheep = Animal::new("Dolly");
+// TODO ^ Try removing the type annotations.
 
-    dolly.talk();
-    dolly.shear();
-    dolly.talk();
-}
+dolly.talk();
+dolly.shear();
+dolly.talk();

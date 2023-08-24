@@ -1,9 +1,4 @@
-
-
-
-function main(): undefined {
-    let dolly: Sheep = Animal.new("Dolly");
-    dolly.talk();
-    dolly.shear();
-    dolly.talk();
-}
+let dolly: Sheep = Animal.new("Dolly");
+dolly.talk();
+dolly.shear();
+dolly.talk();
