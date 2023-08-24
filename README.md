@@ -9,5 +9,4 @@ This is my first attempt at building a programming language. It's been a lot of 
 Source > Tokens > AST > Semantic checks > Transformer > Generator
 
 ### Changes in rewrite
-A single error breaks the flow of parsing.
-Error handing and messages.
+Error recovery, error handing, and error messages.
