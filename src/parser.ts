@@ -44,7 +44,6 @@ import {
 export class Parser {
     private readonly tokens: Token[];
     private readonly errors: Error[] = [];
-    private start = 0;
     private current = 0;
 
     constructor(tokens: Token[]) {
@@ -231,11 +230,11 @@ export class Parser {
             const type = this.consume_type();
             if (isError(type)) return type;
 
-            if (!this.match(TokenKind.Comma)) {
-                return this.error(TokenKind.Comma);
-            }
-
             fields.push({ name, type });
+
+            if (!this.match(TokenKind.Comma)) {
+                break;
+            }
         }
 
         return {
@@ -638,6 +637,7 @@ export class Parser {
 
     private consume_type(): Result<Type> {
         const t = this.tokens[this.current];
+        // @TODO: What was I thinking?
         if (this.match(TokenKind.Num)) return { kind: TypeKind.Number, value: <number><unknown>t.value * 1 }
         if (this.match(TokenKind.Str)) return { kind: TypeKind.String, value: <string>t.value }
         if (this.match(TokenKind.Bool)) return { kind: TypeKind.Boolean, value: <boolean>!!t.value }
@@ -1150,18 +1150,4 @@ export class Parser {
 
         return t;
     }
-
-    // private node<T extends Omit<Stmt|Expr, "span">>(node: T): { span: Span } & T {
-    //     const out = {
-    //         ...node,
-    //         span: {
-    //             start: this.tokens[this.start].span.start,
-    //             end: this.tokens[this.current-1].span.end,
-    //         },
-    //     };
-        
-    //     this.start = this.current;
-
-    //     return out;
-    // }
 }
