@@ -9,7 +9,7 @@ import {
 
 export class Generator {
     private ast: AST;
-    private depth = 0;
+    private depth = "";
 
     constructor(ast: AST) {
         this.ast = ast;
@@ -25,7 +25,7 @@ export class Generator {
     }
 
     stmt(stmt: Stmt): string {
-        let output = "    ".repeat(this.depth);
+        let output = this.depth;
 
         if (stmt.kind === StmtKind.Let) {
             output += `let ${
@@ -82,30 +82,30 @@ export class Generator {
         } else if (expr.kind === ExprKind.Switch) {
             output += `switch (${this.expr(expr.expr)}) {\n`;
             for (const arm of expr.arms) {
-                output += "    ".repeat(this.depth+1);
+                output += this.depth + "\t";
 
                 const expr = this.expr(arm.expr);
                 if (expr === "_") {
                     output += "default: \n";
                 } else {
-                    output += `case ${expr.split(" | ").join(`:\n${"    ".repeat(this.depth+1)}case `)}: \n`;
+                    output += `case ${expr.split(" | ").join(`:\n${this.depth+"\t"}case `)}: \n`;
                 }
 
-                output += "    ".repeat(this.depth+2) + this.stmt(arm.body);
+                output += this.depth+"\t\t" + this.stmt(arm.body);
             }
-            output += "    ".repeat(this.depth)+"}";
+            output += this.depth + "}";
         } else if (expr.kind === ExprKind.Block) {
             output += `{\n`;
 
-            this.depth ++;
+            this.depth += "\t";
 
             for (const s of expr.stmts) {
                 output += this.stmt(s);
             }
             
-            this.depth --;
+            this.depth = this.depth.slice(0, -1);
 
-            output += "    ".repeat(this.depth)+`}`;
+            output += this.depth+`}`;
         } else if (expr.kind === ExprKind.GetField) {
             output += `${this.expr(expr.expr)}.${expr.field.value}`;
         } else if (expr.kind === ExprKind.GetIndex) {
@@ -133,10 +133,10 @@ export class Generator {
         } else if (expr.kind === ExprKind.Object) {
             output += "{\n";
             for (const prop of expr.props) {
-                output += "    ".repeat(this.depth+1);
+                output += this.depth+"    ";
                 output += `${prop.key.value}: ${this.expr(prop.value)},`;
             }
-            output += "    ".repeat(this.depth);
+            output += this.depth;
             output += "\n}";
         } else if (expr.kind == ExprKind.Path) {
             output += this.expr(expr.left);
