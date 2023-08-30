@@ -60,6 +60,28 @@ export class Generator {
             }): ${stmt.type.return_type?.value} ${
                 this.expr(stmt.block)
             }`;
+        } else if (stmt.kind === StmtKind.Impl) {
+            output += `const ${stmt.impl_name.value} = {\n`;
+            
+            for (const m of stmt.methods) {
+                output += this.depth+"\t" + m.type.name.value + "(";
+                output += m.type.params.map(p => p.name.value).join(", ");
+                output += `): ${m.type.return_type?.value} `;
+
+                    this.depth += "\t";
+                    output += this.expr(m.block);
+                    this.depth = this.depth.slice(0, -1);
+
+                output += "\n";
+            }
+
+            output += this.depth + "};\n";
+        } else if (stmt.kind === StmtKind.Struct) {
+            output += `type ${stmt.name.value} = {\n`;
+            for (const f of stmt.fields) {
+                output += `${this.depth}\t${f.name.value}: ${f.type.value},\n`;
+            }
+            output += this.depth + "};\n";
         }
 
         return output;
