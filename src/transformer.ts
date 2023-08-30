@@ -107,12 +107,7 @@ export class Transformer {
                 console.log("struct already exists");
             }
 
-            return {
-                kind: stmt.kind,
-                name: stmt.name,
-                fields: stmt.fields,
-                span: stmt.span,
-            };
+            return stmt;
         } else if (stmt.kind === StmtKind.Expr) {
             const expr = this.expr(stmt.expr);
             if (isError(expr)) return expr;
