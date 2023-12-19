@@ -6,7 +6,7 @@ The goal of this language is to address a lot of the pain points of JavaScript. 
 This is my first attempt at building a programming language. It's been a lot of fun, and I've learned a lot. Although I'm sure there's plenty of mistakes and bad design decisions. I'll try to continue working on this while I have motivation, but I'm not sure if it will ever become usable.
 
 ### Architecture Overview
-Source > Tokens > AST > Semantic checks > Transformer > Generator
+file.rus > Tokens > AST > Semantic checks > Transformer > Generator > file.res > Rescript Compiler > file.js
 
 ### Changes in rewrite
 Error recovery, error handing, and error messages.
