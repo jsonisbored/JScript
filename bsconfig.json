@@ -1,0 +1,8 @@
+{
+    "name": "language",
+    "sources": "example",
+    "package-specs": {
+        "module": "es6-global",
+        "in-source": true
+    }
+}

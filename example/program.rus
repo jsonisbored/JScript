@@ -9,9 +9,9 @@ trait Animal {
     fn noise(self: Self): str;
 
     // Traits can provide default method definitions.
-    fn talk(self: Self) {
-        println("{} says {}", self.name(), self.noise());
-    }
+    // fn talk(self: Self) {
+    //     println("{} says {}", self.name(), self.noise());
+    // }
 }
 
 impl Sheep {
@@ -57,9 +57,7 @@ impl Animal for Sheep {
     }
 }
 
-// Type annotation is necessary in this case.
-let mut dolly: Sheep = Animal::new("Dolly");
-// TODO ^ Try removing the type annotations.
+let mut dolly: Sheep = Sheep::new("Dolly");
 
 dolly.talk();
 dolly.shear();

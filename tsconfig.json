@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "allowImportingTsExtensions": true, // it work asdfjavneou
+        "noEmit": false,
+        "module": "ESNext",
+        "target": "ESNext",
+        "outDir": "dist",
+        "skipLibCheck": true,
+    },
+    "include": ["example/*.ts"],
+}
