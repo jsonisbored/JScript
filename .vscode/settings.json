@@ -1,4 +1,0 @@
-{
-    "typescript.tsdk": "./node_modules/tscm/typescript/lib",
-    "deno.enable": true,
-}
