@@ -512,6 +512,10 @@ export class Parser {
         const expr = this.any_expr();
         if (isError(expr)) return expr;
 
+        if (this.check(TokenKind.Equal)) {
+            return this.assign_stmt(expr);
+        }
+
         if (this.match(TokenKind.Semicolon)) {
             return {
                 kind: StmtKind.Expr,
@@ -521,9 +525,20 @@ export class Parser {
                     end: this.tokens[this.current-1].span.end,
                 },
             };
+        } else {
+            return {
+                kind: StmtKind.Return,
+                expr,
+                span: {
+                    start: expr.span.start,
+                    end: this.tokens[this.current-1].span.end,
+                },
+            };
         }
+        // if (!this.match(TokenKind.Semicolon)) {
+        //     return this.error(TokenKind.Semicolon);
+        // }
 
-        return this.assign_stmt(expr);
     }
 
     private assign_stmt(expr: Expr): Result<AssignStmt> {

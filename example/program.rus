@@ -1,19 +1,5 @@
 struct Sheep { naked: bool, name: str }
 
-trait Animal {
-    // Associated function signature; `Self` refers to the implementor type.
-    fn new(name: str): Self;
-
-    // Method signatures; these will return a string.
-    fn name(self: Self): str;
-    fn noise(self: Self): str;
-
-    // Traits can provide default method definitions.
-    // fn talk(self: Self) {
-    //     println("{} says {}", self.name(), self.noise());
-    // }
-}
-
 impl Sheep {
     fn is_naked(self: Self): bool {
         self.naked
@@ -29,6 +15,20 @@ impl Sheep {
             self.naked = true;
         }
     }
+}
+
+trait Animal {
+    // Associated function signature; `Self` refers to the implementor type.
+    fn new(name: str): Self;
+
+    // Method signatures; these will return a string.
+    fn name(self: Self): str;
+    fn noise(self: Self): str;
+
+    // Traits can provide default method definitions.
+    // fn talk(self: Self) {
+    //     println("{} says {}", self.name(), self.noise());
+    // }
 }
 
 // Implement the `Animal` trait for `Sheep`.

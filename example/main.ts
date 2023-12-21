@@ -4,7 +4,7 @@ import {
     Transformer,
     Generator,
     Error,
-} from "./../src/lib.ts";
+} from "../src/lib.ts";
 
 const input = await Deno.readTextFile("./example/program.rus");
 const lines = input.split("\n").length;
@@ -56,5 +56,5 @@ generator();
 // console.log(js);
 
 const writing = time("writing");
-await Deno.writeTextFile("./example/program.ts", js);
+await Deno.writeTextFile("./example/program.res", js);
 writing();

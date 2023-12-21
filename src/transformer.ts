@@ -11,6 +11,7 @@ import {
 
     Stmt,
     StmtKind,
+    FnStmt,
     SwitchArm,
 
     isError,
@@ -22,7 +23,12 @@ import {
 
 interface Scope {
     structs: Array<{ name: string }>,
-    impl: Array<{ impl_name: string, for_name?: string }>,
+    impl: Array<{
+        name: string,
+        // impl_name: string,
+        // for_name?: string,
+        methods: FnStmt[],
+    }>,
 }
 
 
@@ -179,9 +185,10 @@ export class Transformer {
             };
         } else if (stmt.kind === StmtKind.Impl) {
             let impl;
+            const impl_name = stmt.for_name?.value ?? stmt.impl_name.value;
             for (let level = this.scope_level; level >= 0; level --) {
                 const scope = this.scopes[level];
-                impl = scope.impl.find(s => s.impl_name === stmt.impl_name.value);
+                impl = scope.impl.find(s => s.name === impl_name);
                 if (impl) {
                     break;
                 }
@@ -189,8 +196,8 @@ export class Transformer {
 
             if (!impl) {
                 this.scopes[this.scope_level].impl.push({
-                    impl_name: stmt.impl_name.value,
-                    for_name: stmt.for_name?.value
+                    name: impl_name,
+                    methods: stmt.methods,
                 });
             } else {
                 console.log("impl already exists");
