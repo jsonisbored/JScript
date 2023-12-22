@@ -88,6 +88,16 @@ function type_check(ast: Program): TypeError[] {
                     e.pos.offset,
                     `Expected type 'num' to the right of '${e.op}'`,
                 ));
+            } else if (
+                e.op === "+" &&
+                e.left.type === "str" &&
+                e.right.type !== "str"
+            ) {
+                errors.push(new TypeError(
+                    e.pos.line,
+                    e.pos.offset,
+                    `Expected type 'str' to the right of '${e.op}'`,
+                ));
             }
             return e.type;
         }
