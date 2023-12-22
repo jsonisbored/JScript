@@ -4,6 +4,7 @@ import {
     Expr,
     Stmt,
     ASTKinds,
+    LetStmt,
 } from "../src/parser.ts";
 
 function error(input: string, line: number, offset: number, message: string) {
@@ -21,7 +22,8 @@ function error(input: string, line: number, offset: number, message: string) {
     console.error(msg);
 }
 
-class CheckError {
+
+class TypeError {
     constructor(
         public line: number,
         public offset: number,
@@ -29,8 +31,78 @@ class CheckError {
     ) {}
 }
 
-function check(ast: Program) {
-    const errors: CheckError[] = [];
+class ValidateError {
+    constructor(
+        public line: number,
+        public offset: number,
+        public message: string
+    ) {}
+}
+
+function type_check(ast: Program): TypeError[] {
+    const errors: TypeError[] = [];
+    const vars = new Map<string, LetStmt>();
+
+    function stmt(s: Stmt) {
+        if (s.kind === ASTKinds.LetStmt) {
+            expr(s.expr);
+            if (!s.type) {
+                s.type = s.expr.type;
+            } else if (s.type !== s.expr.type) {
+                errors.push(new TypeError(
+                    s.pos.line,
+                    s.pos.offset,
+                    `Cannot assign type '${s.expr.type}' to type '${s.type}'`,
+                ));
+            }
+            vars.set(s.ident.literal, s);
+        } else if (s.kind === ASTKinds.AssignStmt) {
+            expr(s.expr);
+            const v = vars.get(s.ident.literal);
+            if (s.expr.type !== v?.type) {
+                errors.push(new TypeError(
+                    s.pos.line,
+                    s.pos.offset,
+                    `Cannot assign type '${s.expr.type}' to type '${v?.type}'`,
+                ));
+            }
+        }
+    }
+    function expr(e: Expr): string {
+        if (
+            e.kind === ASTKinds.StringExpr ||
+            e.kind === ASTKinds.NumExpr ||
+            e.kind === ASTKinds.GroupExpr
+        ) {
+            return e.type;
+        } else if (
+            e.kind === ASTKinds.ProdExpr ||
+            e.kind === ASTKinds.SumExpr
+        ) {
+            if (
+                e.left.type === "num" &&
+                e.right.type !== "num"
+            ) {
+                errors.push(new TypeError(
+                    e.pos.line,
+                    e.pos.offset,
+                    `Expected type 'num' to the right of '${e.op}'`,
+                ));
+            }
+            return e.type;
+        }
+        return "idk";
+    }
+    
+    for (const s of ast.stmts) {
+        stmt(s);
+    }
+
+    return errors;
+}
+
+function validate(ast: Program): ValidateError[] {
+    const errors: ValidateError[] = [];
     const consts = new Set<string>();
     const lets = new Set<string>();
 
@@ -38,13 +110,11 @@ function check(ast: Program) {
         if (s.kind === ASTKinds.LetStmt) {
             const name = s.ident.literal;
             if (lets.has(name) || consts.has(name)) {
-                errors.push(
-                    new CheckError(
-                        s.pos.line,
-                        s.pos.offset,
-                        `Variable \`${name}\` already exists`
-                    )
-                );
+                errors.push(new ValidateError(
+                    s.pos.line,
+                    s.pos.offset,
+                    `Variable \`${name}\` already exists`
+                ));
             }
             if (s.mut) {
                 lets.add(name);
@@ -54,21 +124,17 @@ function check(ast: Program) {
         } else if (s.kind === ASTKinds.AssignStmt) {
             const name = s.ident.literal;
             if (consts.has(name)) {
-                errors.push(
-                    new CheckError(
-                        s.pos.line,
-                        s.pos.offset,
-                        `Cannont assign to \`${name}\` because it is immutable`
-                    )
-                );
+                errors.push(new ValidateError(
+                    s.pos.line,
+                    s.pos.offset,
+                    `Cannont assign to \`${name}\` because it is immutable`
+                ));
             } else if (!lets.has(name)) {
-                errors.push(
-                    new CheckError(
-                        s.pos.line,
-                        s.pos.offset,
-                        `Cannont find variable \`${name}\` in this scope`
-                    )
-                );
+                errors.push(new ValidateError(
+                    s.pos.line,
+                    s.pos.offset,
+                    `Cannont find variable \`${name}\` in this scope`
+                ));
             }
         }
     }
@@ -83,7 +149,7 @@ function check(ast: Program) {
     return errors;
 }
 
-function generate(ast: Program) {
+function generate(ast: Program): string {
     let output = "";
     
     function stmt(s: Stmt): string {
@@ -145,12 +211,18 @@ async function main() {
         }
         return;
     }
-    // console.log(ast);
 
-    const errors = check(ast);
-    if (errors.length) {
-        for (const e of errors) {
-            error(input, e.line, e.offset, "Checker Error: "+e.message);
+    const validate_errors = validate(ast);
+    if (validate_errors.length) {
+        for (const e of validate_errors) {
+            error(input, e.line, e.offset, "Validate Error: "+e.message);
+        }
+    }
+    
+    const type_errors = type_check(ast);
+    if (type_errors.length) {
+        for (const e of type_errors) {
+            error(input, e.line, e.offset, "Type Error: "+e.message);
         }
     }
 

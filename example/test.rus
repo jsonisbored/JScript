@@ -1,4 +1,4 @@
-let a = "asdf";
+let a: num = "asdf";
 let mut b = "asdf";
 b = 2;
 

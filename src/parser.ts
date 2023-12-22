@@ -5,22 +5,34 @@
 *     | ExprStmt
 *     | LetStmt
 *     | AssignStmt
-* LetStmt := _'let '_ mut='mut'?_ ident=Ident _'='_ expr=Expr _';' pos=@ _
+* LetStmt := _'let '_
+*     mut='mut '?_
+*     ident=Ident
+*     _{':\s*' &'[a-zA-Z_]'}? type='[a-zA-Z_][a-zA-Z0-9_]*'?
+*     _'='_
+*     expr=Expr
+*     _';' pos=@ _
 * AssignStmt := _ ident=Ident _'='_ expr=Expr _';' pos=@ _
 * CommentStmt := _ literal='//.*' pos=@ _
 * ExprStmt := expr=Expr pos=@
+* FnStmt := _'fn '_ ident=Ident _'\('_ params='[a-zA-Z_][a-zA-Z0-9_]*'* _'\)' pos=@ _
 * Expr := SumExpr
 *     | ProdExpr
 *     | GroupExpr
 *     | NumExpr
 *     | StringExpr
 * SumExpr := left=Expr _ op='\+|-'_ right=Expr pos=@
+*     .type = string { return this.left.type; }
 * ProdExpr := left=Expr _ op='\*|/'_ right=Expr pos=@
+*     .type = string { return this.left.type; }
 * GroupExpr := _'\('_ expr=Expr _'\)'_ pos=@
+*     .type = string { return this.expr.type; }
 * NumExpr := _ literal='[0-9]+(\.[0-9]+)?' pos=@ _
 *     .value = number { return Number(this.literal); }
+*     .type = string { return 'num'; }
 * StringExpr := _ literal='".*"' _ pos=@
 *     .value = string { return this.literal.slice(1, -1); }
+*     .type = string { return 'str'; }
 * Ident := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_
 * _ := '\s*'
 */
@@ -36,9 +48,11 @@ export enum ASTKinds {
     Stmt_3 = "Stmt_3",
     Stmt_4 = "Stmt_4",
     LetStmt = "LetStmt",
+    LetStmt_$0 = "LetStmt_$0",
     AssignStmt = "AssignStmt",
     CommentStmt = "CommentStmt",
     ExprStmt = "ExprStmt",
+    FnStmt = "FnStmt",
     Expr_1 = "Expr_1",
     Expr_2 = "Expr_2",
     Expr_3 = "Expr_3",
@@ -66,8 +80,12 @@ export interface LetStmt {
     kind: ASTKinds.LetStmt;
     mut: Nullable<string>;
     ident: Ident;
+    type: Nullable<string>;
     expr: Expr;
     pos: PosInfo;
+}
+export interface LetStmt_$0 {
+    kind: ASTKinds.LetStmt_$0;
 }
 export interface AssignStmt {
     kind: ASTKinds.AssignStmt;
@@ -85,41 +103,79 @@ export interface ExprStmt {
     expr: Expr;
     pos: PosInfo;
 }
+export interface FnStmt {
+    kind: ASTKinds.FnStmt;
+    ident: Ident;
+    params: string[];
+    pos: PosInfo;
+}
 export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5;
 export type Expr_1 = SumExpr;
 export type Expr_2 = ProdExpr;
 export type Expr_3 = GroupExpr;
 export type Expr_4 = NumExpr;
 export type Expr_5 = StringExpr;
-export interface SumExpr {
-    kind: ASTKinds.SumExpr;
-    left: Expr;
-    op: string;
-    right: Expr;
-    pos: PosInfo;
+export class SumExpr {
+    public kind: ASTKinds.SumExpr = ASTKinds.SumExpr;
+    public left: Expr;
+    public op: string;
+    public right: Expr;
+    public pos: PosInfo;
+    public type: string;
+    constructor(left: Expr, op: string, right: Expr, pos: PosInfo){
+        this.left = left;
+        this.op = op;
+        this.right = right;
+        this.pos = pos;
+        this.type = ((): string => {
+        return this.left.type;
+        })();
+    }
 }
-export interface ProdExpr {
-    kind: ASTKinds.ProdExpr;
-    left: Expr;
-    op: string;
-    right: Expr;
-    pos: PosInfo;
+export class ProdExpr {
+    public kind: ASTKinds.ProdExpr = ASTKinds.ProdExpr;
+    public left: Expr;
+    public op: string;
+    public right: Expr;
+    public pos: PosInfo;
+    public type: string;
+    constructor(left: Expr, op: string, right: Expr, pos: PosInfo){
+        this.left = left;
+        this.op = op;
+        this.right = right;
+        this.pos = pos;
+        this.type = ((): string => {
+        return this.left.type;
+        })();
+    }
 }
-export interface GroupExpr {
-    kind: ASTKinds.GroupExpr;
-    expr: Expr;
-    pos: PosInfo;
+export class GroupExpr {
+    public kind: ASTKinds.GroupExpr = ASTKinds.GroupExpr;
+    public expr: Expr;
+    public pos: PosInfo;
+    public type: string;
+    constructor(expr: Expr, pos: PosInfo){
+        this.expr = expr;
+        this.pos = pos;
+        this.type = ((): string => {
+        return this.expr.type;
+        })();
+    }
 }
 export class NumExpr {
     public kind: ASTKinds.NumExpr = ASTKinds.NumExpr;
     public literal: string;
     public pos: PosInfo;
     public value: number;
+    public type: string;
     constructor(literal: string, pos: PosInfo){
         this.literal = literal;
         this.pos = pos;
         this.value = ((): number => {
         return Number(this.literal);
+        })();
+        this.type = ((): string => {
+        return 'num';
         })();
     }
 }
@@ -128,11 +184,15 @@ export class StringExpr {
     public literal: string;
     public pos: PosInfo;
     public value: string;
+    public type: string;
     constructor(literal: string, pos: PosInfo){
         this.literal = literal;
         this.pos = pos;
         this.value = ((): string => {
         return this.literal.slice(1, -1);
+        })();
+        this.type = ((): string => {
+        return 'str';
         })();
     }
 }
@@ -199,6 +259,7 @@ export class Parser {
             () => {
                 let $scope$mut: Nullable<Nullable<string>>;
                 let $scope$ident: Nullable<Ident>;
+                let $scope$type: Nullable<Nullable<string>>;
                 let $scope$expr: Nullable<Expr>;
                 let $scope$pos: Nullable<PosInfo>;
                 let $$res: Nullable<LetStmt> = null;
@@ -206,9 +267,12 @@ export class Parser {
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:let )`, "", $$dpth + 1, $$cr) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && (($scope$mut = this.regexAccept(String.raw`(?:mut)`, "", $$dpth + 1, $$cr)) || true)
+                    && (($scope$mut = this.regexAccept(String.raw`(?:mut )`, "", $$dpth + 1, $$cr)) || true)
                     && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$ident = this.matchIdent($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ((this.matchLetStmt_$0($$dpth + 1, $$cr)) || true)
+                    && (($scope$type = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr)) || true)
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:=)`, "", $$dpth + 1, $$cr) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
@@ -218,7 +282,20 @@ export class Parser {
                     && ($scope$pos = this.mark()) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                 ) {
-                    $$res = {kind: ASTKinds.LetStmt, mut: $scope$mut, ident: $scope$ident, expr: $scope$expr, pos: $scope$pos};
+                    $$res = {kind: ASTKinds.LetStmt, mut: $scope$mut, ident: $scope$ident, type: $scope$type, expr: $scope$expr, pos: $scope$pos};
+                }
+                return $$res;
+            });
+    }
+    public matchLetStmt_$0($$dpth: number, $$cr?: ErrorTracker): Nullable<LetStmt_$0> {
+        return this.run<LetStmt_$0>($$dpth,
+            () => {
+                let $$res: Nullable<LetStmt_$0> = null;
+                if (true
+                    && this.regexAccept(String.raw`(?::\s*)`, "", $$dpth + 1, $$cr) !== null
+                    && this.noConsume<string>(() => this.regexAccept(String.raw`(?:[a-zA-Z_])`, "", $$dpth + 1, $$cr)) !== null
+                ) {
+                    $$res = {kind: ASTKinds.LetStmt_$0, };
                 }
                 return $$res;
             });
@@ -275,6 +352,32 @@ export class Parser {
                     && ($scope$pos = this.mark()) !== null
                 ) {
                     $$res = {kind: ASTKinds.ExprStmt, expr: $scope$expr, pos: $scope$pos};
+                }
+                return $$res;
+            });
+    }
+    public matchFnStmt($$dpth: number, $$cr?: ErrorTracker): Nullable<FnStmt> {
+        return this.run<FnStmt>($$dpth,
+            () => {
+                let $scope$ident: Nullable<Ident>;
+                let $scope$params: Nullable<string[]>;
+                let $scope$pos: Nullable<PosInfo>;
+                let $$res: Nullable<FnStmt> = null;
+                if (true
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:fn )`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$ident = this.matchIdent($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:\()`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$params = this.loop<string>(() => this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr), 0, -1)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:\))`, "", $$dpth + 1, $$cr) !== null
+                    && ($scope$pos = this.mark()) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                ) {
+                    $$res = {kind: ASTKinds.FnStmt, ident: $scope$ident, params: $scope$params, pos: $scope$pos};
                 }
                 return $$res;
             });
@@ -345,7 +448,7 @@ export class Parser {
                     && ($scope$right = this.matchExpr($$dpth + 1, $$cr)) !== null
                     && ($scope$pos = this.mark()) !== null
                 ) {
-                    $$res = {kind: ASTKinds.SumExpr, left: $scope$left, op: $scope$op, right: $scope$right, pos: $scope$pos};
+                    $$res = new SumExpr($scope$left, $scope$op, $scope$right, $scope$pos);
                 }
                 return $$res;
             });
@@ -366,7 +469,7 @@ export class Parser {
                     && ($scope$right = this.matchExpr($$dpth + 1, $$cr)) !== null
                     && ($scope$pos = this.mark()) !== null
                 ) {
-                    $$res = {kind: ASTKinds.ProdExpr, left: $scope$left, op: $scope$op, right: $scope$right, pos: $scope$pos};
+                    $$res = new ProdExpr($scope$left, $scope$op, $scope$right, $scope$pos);
                 }
                 return $$res;
             });
@@ -387,7 +490,7 @@ export class Parser {
                     && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$pos = this.mark()) !== null
                 ) {
-                    $$res = {kind: ASTKinds.GroupExpr, expr: $scope$expr, pos: $scope$pos};
+                    $$res = new GroupExpr($scope$expr, $scope$pos);
                 }
                 return $$res;
             });
