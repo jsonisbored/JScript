@@ -5,20 +5,16 @@
   "main": "src/lib.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "deno run -A example/main.ts && npx rescript",
-    "build": "deno run src/main.ts"
+    "start": "tspeg src/grammar.peg src/parser.ts && deno run -A example/main.ts"
   },
   "type": "module",
   "keywords": [],
-  "author": "JSON",
+  "author": "",
   "license": "ISC",
   "devDependencies": {
-    "ts-node": "^10.9.1"
   },
   "dependencies": {
     "@types/node": "^20.9.2",
-    "ezno": "^0.0.18",
-    "node-ts": "^6.0.1",
     "rescript": "^10.1.4"
   }
 }

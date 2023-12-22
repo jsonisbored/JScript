@@ -1,60 +1,161 @@
 import {
-    Lexer,
-    Parser,
-    Transformer,
-    Generator,
-    Error,
-} from "../src/lib.ts";
+    parse,
+    Program,
+    Expr,
+    Stmt,
+    ASTKinds,
+} from "../src/parser.ts";
 
-const input = await Deno.readTextFile("./example/program.rus");
-const lines = input.split("\n").length;
-// console.log(input);
-
-
-function time(name: string) {
-    const then = performance.now();
-    return () => {
-        const ns = (performance.now()-then)*1000 |0;
-        let str = name.padStart(12);
-
-        str += " ";
-        str += ns.toString().padStart(6);
-        str += " ns";
-
-        str += " ";
-        str += (ns/lines).toFixed(2).padStart(8);
-        str += " ns/line";
-
-        console.log(str);
-    };
+function error(input: string, line: number, offset: number, message: string) {
+    const start = Math.max(line-5, 0);
+    const end = Math.min(line, input.split("\n").length);
+    const msg = input
+        .split("\n")
+        .map((s, i) => `${i+1}  |  ${s}`)
+        .splice(start, end)
+        .join("\n")
+        + "\n"
+        +  "   |  " + "^".padStart(offset+1, " ")
+        +"\n"
+        +message;
+    console.error(msg);
 }
 
-const lexer = time("lexer");
-const { tokens } = new Lexer(input).tokenizer();
-lexer();
-// console.log(tokens);
-
-const parser = time("parser");
-const { ast, errors: _errors } = new Parser(tokens).parse();
-parser();
-// console.dir(ast, { depth: 15, });
-
-function _format_error(e: Error): string {
-    return `${input.slice(e.position-50, e.position)}\n${e.message}`;
+class CheckError {
+    constructor(
+        public line: number,
+        public offset: number,
+        public message: string
+    ) {}
 }
-// console.log(_errors.map(format_error));
 
-const transformer = time("transformer");
-const { ast: transformed, errors: _errors2 } = new Transformer(ast).transform();
-transformer();
-// console.dir(transformed, { depth: 15, });
-// console.log(_errors2.map(format_error));
+function check(ast: Program) {
+    const errors: CheckError[] = [];
+    const consts = new Set<string>();
+    const lets = new Set<string>();
 
-const generator = time("generator");
-const js = new Generator(transformed).generate();
-generator();
-// console.log(js);
+    function stmt(s: Stmt) {
+        if (s.kind === ASTKinds.LetStmt) {
+            const name = s.ident.literal;
+            if (lets.has(name) || consts.has(name)) {
+                errors.push(
+                    new CheckError(
+                        s.pos.line,
+                        s.pos.offset,
+                        `Variable \`${name}\` already exists`
+                    )
+                );
+            }
+            if (s.mut) {
+                lets.add(name);
+            } else {
+                consts.add(name);
+            }
+        } else if (s.kind === ASTKinds.AssignStmt) {
+            const name = s.ident.literal;
+            if (consts.has(name)) {
+                errors.push(
+                    new CheckError(
+                        s.pos.line,
+                        s.pos.offset,
+                        `Cannont assign to \`${name}\` because it is immutable`
+                    )
+                );
+            } else if (!lets.has(name)) {
+                errors.push(
+                    new CheckError(
+                        s.pos.line,
+                        s.pos.offset,
+                        `Cannont find variable \`${name}\` in this scope`
+                    )
+                );
+            }
+        }
+    }
+    // function expr(e: Expr) {
 
-const writing = time("writing");
-await Deno.writeTextFile("./example/program.res", js);
-writing();
+    // }
+
+    for (const s of ast.stmts) {
+        stmt(s);
+    }
+
+    return errors;
+}
+
+function generate(ast: Program) {
+    let output = "";
+    
+    function stmt(s: Stmt): string {
+        let output = "";
+        if (s.kind === ASTKinds.CommentStmt) {
+            output += s.literal;
+        } else if (s.kind === ASTKinds.ExprStmt) {
+            output += expr(s.expr);
+        } else if (s.kind === ASTKinds.LetStmt) {
+            output += (s.mut ? "let " : "const ")
+                +s.ident.literal
+                +" = "
+                +expr(s.expr)
+                +";";
+        } else if (s.kind === ASTKinds.AssignStmt) {
+            output += s.ident.literal
+                +" = "
+                +expr(s.expr)
+                +";";
+        }
+        return output;
+    }
+    function expr(e: Expr): string {
+        let output = "";
+        if (e.kind === ASTKinds.SumExpr) {
+            output += expr(e.left)
+                +e.op
+                +expr(e.right);
+        } else if (e.kind === ASTKinds.ProdExpr) {
+            output += expr(e.left)
+                +e.op
+                +expr(e.right);
+        } else if (e.kind === ASTKinds.GroupExpr) {
+            output += "("
+                +expr(e.expr)
+                +")";
+        } else if (e.kind === ASTKinds.NumExpr) {
+            output += e.value;
+        } else if (e.kind === ASTKinds.StringExpr) {
+            output += e.literal;
+        }
+        return output;
+    }
+
+    for (const s of ast.stmts) {
+        output += stmt(s) + "\n";
+    }
+
+    return output;
+}
+
+async function main() {
+    const input = await Deno.readTextFile("./example/test.rus");
+
+    const { ast, errs } = parse(input);
+    if (errs.length || !ast) {
+        for (const e of errs) {
+            error(input, e.pos.line, e.pos.offset, "Syntax Error: ");
+        }
+        return;
+    }
+    // console.log(ast);
+
+    const errors = check(ast);
+    if (errors.length) {
+        for (const e of errors) {
+            error(input, e.line, e.offset, "Checker Error: "+e.message);
+        }
+    }
+
+    const output = generate(ast);
+
+    Deno.writeTextFile("./example/output.js", output);
+}
+main();
