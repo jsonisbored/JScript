@@ -22,25 +22,19 @@ function error(input: string, line: number, offset: number, message: string) {
     console.error(msg);
 }
 
-
-class TypeError {
-    constructor(
-        public line: number,
-        public offset: number,
-        public message: string
-    ) {}
+enum ErrorKind {
+    Type = "Type",
+    Validate = "Validate",
+}
+interface Error {
+    kind: ErrorKind,
+    line: number,
+    offset: number,
+    message: string,
 }
 
-class ValidateError {
-    constructor(
-        public line: number,
-        public offset: number,
-        public message: string
-    ) {}
-}
-
-function type_check(ast: Program): TypeError[] {
-    const errors: TypeError[] = [];
+function type_check(ast: Program): Error[] {
+    const errors: Error[] = [];
     const vars = new Map<string, LetStmt>();
 
     function stmt(s: Stmt) {
@@ -49,22 +43,24 @@ function type_check(ast: Program): TypeError[] {
             if (!s.type) {
                 s.type = s.expr.type;
             } else if (s.type !== s.expr.type) {
-                errors.push(new TypeError(
-                    s.pos.line,
-                    s.pos.offset,
-                    `Cannot assign type '${s.expr.type}' to type '${s.type}'`,
-                ));
+                errors.push({
+                    kind: ErrorKind.Type,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Cannot assign type '${s.expr.type}' to type '${s.type}'`,
+                });
             }
             vars.set(s.ident.literal, s);
         } else if (s.kind === ASTKinds.AssignStmt) {
             expr(s.expr);
             const v = vars.get(s.ident.literal);
             if (s.expr.type !== v?.type) {
-                errors.push(new TypeError(
-                    s.pos.line,
-                    s.pos.offset,
-                    `Cannot assign type '${s.expr.type}' to type '${v?.type}'`,
-                ));
+                errors.push({
+                    kind: ErrorKind.Type,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Cannot assign type '${s.expr.type}' to type '${v?.type}'`,
+                });
             }
         }
     }
@@ -83,21 +79,23 @@ function type_check(ast: Program): TypeError[] {
                 e.left.type === "num" &&
                 e.right.type !== "num"
             ) {
-                errors.push(new TypeError(
-                    e.pos.line,
-                    e.pos.offset,
-                    `Expected type 'num' to the right of '${e.op}'`,
-                ));
+                errors.push({
+                    kind: ErrorKind.Type,
+                    line: e.pos.line,
+                    offset: e.pos.offset,
+                    message: `Expected type 'num' to the right of '${e.op}'`,
+                });
             } else if (
                 e.op === "+" &&
                 e.left.type === "str" &&
                 e.right.type !== "str"
             ) {
-                errors.push(new TypeError(
-                    e.pos.line,
-                    e.pos.offset,
-                    `Expected type 'str' to the right of '${e.op}'`,
-                ));
+                errors.push({
+                    kind: ErrorKind.Type,
+                    line: e.pos.line,
+                    offset: e.pos.offset,
+                    message: `Expected type 'str' to the right of '${e.op}'`,
+                });
             }
             return e.type;
         }
@@ -111,8 +109,8 @@ function type_check(ast: Program): TypeError[] {
     return errors;
 }
 
-function validate(ast: Program): ValidateError[] {
-    const errors: ValidateError[] = [];
+function validate(ast: Program): Error[] {
+    const errors: Error[] = [];
     const consts = new Set<string>();
     const lets = new Set<string>();
 
@@ -120,11 +118,12 @@ function validate(ast: Program): ValidateError[] {
         if (s.kind === ASTKinds.LetStmt) {
             const name = s.ident.literal;
             if (lets.has(name) || consts.has(name)) {
-                errors.push(new ValidateError(
-                    s.pos.line,
-                    s.pos.offset,
-                    `Variable \`${name}\` already exists`
-                ));
+                errors.push({
+                    kind: ErrorKind.Validate,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Variable \`${name}\` already exists`
+                });
             }
             if (s.mut) {
                 lets.add(name);
@@ -134,17 +133,19 @@ function validate(ast: Program): ValidateError[] {
         } else if (s.kind === ASTKinds.AssignStmt) {
             const name = s.ident.literal;
             if (consts.has(name)) {
-                errors.push(new ValidateError(
-                    s.pos.line,
-                    s.pos.offset,
-                    `Cannont assign to \`${name}\` because it is immutable`
-                ));
+                errors.push({
+                    kind: ErrorKind.Validate,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Cannont assign to \`${name}\` because it is immutable`
+                });
             } else if (!lets.has(name)) {
-                errors.push(new ValidateError(
-                    s.pos.line,
-                    s.pos.offset,
-                    `Cannont find variable \`${name}\` in this scope`
-                ));
+                errors.push({
+                    kind: ErrorKind.Validate,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Cannont find variable \`${name}\` in this scope`
+                });
             }
         }
     }
