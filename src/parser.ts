@@ -24,7 +24,7 @@
 *     _'{'_ stmts=Stmt* _'}'_
 *     pos=@ _
 * Param := _ name='[a-zA-Z_][a-zA-Z0-9_]*'_
-*     _{':\s*' &'[a-zA-Z_]'}? type='[a-zA-Z_][a-zA-Z0-9_]*'? _
+*     _':'_ type='[a-zA-Z_][a-zA-Z0-9_]*' _
 *     {',' | &'\)'}
 * ReturnStmt := _'return '_ expr=Expr _';'_ pos=@
 * Expr := SumExpr
@@ -46,6 +46,7 @@
 *     .value = string { return this.literal.slice(1, -1); }
 *     .type = string { return 'str'; }
 * IdentExpr := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_ pos=@
+*     .type = string { return 'idk'; }
 * Ident := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_
 * _ := '\s*'
 */
@@ -70,9 +71,8 @@ export enum ASTKinds {
     FnStmt = "FnStmt",
     FnStmt_$0 = "FnStmt_$0",
     Param = "Param",
-    Param_$0 = "Param_$0",
-    Param_$1_1 = "Param_$1_1",
-    Param_$1_2 = "Param_$1_2",
+    Param_$0_1 = "Param_$0_1",
+    Param_$0_2 = "Param_$0_2",
     ReturnStmt = "ReturnStmt",
     Expr_1 = "Expr_1",
     Expr_2 = "Expr_2",
@@ -142,14 +142,11 @@ export interface FnStmt_$0 {
 export interface Param {
     kind: ASTKinds.Param;
     name: string;
-    type: Nullable<string>;
+    type: string;
 }
-export interface Param_$0 {
-    kind: ASTKinds.Param_$0;
-}
-export type Param_$1 = Param_$1_1 | Param_$1_2;
-export type Param_$1_1 = string;
-export type Param_$1_2 = string;
+export type Param_$0 = Param_$0_1 | Param_$0_2;
+export type Param_$0_1 = string;
+export type Param_$0_2 = string;
 export interface ReturnStmt {
     kind: ASTKinds.ReturnStmt;
     expr: Expr;
@@ -243,10 +240,18 @@ export class StringExpr {
         })();
     }
 }
-export interface IdentExpr {
-    kind: ASTKinds.IdentExpr;
-    literal: string;
-    pos: PosInfo;
+export class IdentExpr {
+    public kind: ASTKinds.IdentExpr = ASTKinds.IdentExpr;
+    public literal: string;
+    public pos: PosInfo;
+    public type: string;
+    constructor(literal: string, pos: PosInfo){
+        this.literal = literal;
+        this.pos = pos;
+        this.type = ((): string => {
+        return 'idk';
+        })();
+    }
 }
 export interface Ident {
     kind: ASTKinds.Ident;
@@ -472,17 +477,18 @@ export class Parser {
         return this.run<Param>($$dpth,
             () => {
                 let $scope$name: Nullable<string>;
-                let $scope$type: Nullable<Nullable<string>>;
+                let $scope$type: Nullable<string>;
                 let $$res: Nullable<Param> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$name = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && ((this.matchParam_$0($$dpth + 1, $$cr)) || true)
-                    && (($scope$type = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr)) || true)
+                    && this.regexAccept(String.raw`(?::)`, "", $$dpth + 1, $$cr) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && this.matchParam_$1($$dpth + 1, $$cr) !== null
+                    && ($scope$type = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.matchParam_$0($$dpth + 1, $$cr) !== null
                 ) {
                     $$res = {kind: ASTKinds.Param, name: $scope$name, type: $scope$type};
                 }
@@ -490,28 +496,15 @@ export class Parser {
             });
     }
     public matchParam_$0($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$0> {
-        return this.run<Param_$0>($$dpth,
-            () => {
-                let $$res: Nullable<Param_$0> = null;
-                if (true
-                    && this.regexAccept(String.raw`(?::\s*)`, "", $$dpth + 1, $$cr) !== null
-                    && this.noConsume<string>(() => this.regexAccept(String.raw`(?:[a-zA-Z_])`, "", $$dpth + 1, $$cr)) !== null
-                ) {
-                    $$res = {kind: ASTKinds.Param_$0, };
-                }
-                return $$res;
-            });
-    }
-    public matchParam_$1($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$1> {
-        return this.choice<Param_$1>([
-            () => this.matchParam_$1_1($$dpth + 1, $$cr),
-            () => this.matchParam_$1_2($$dpth + 1, $$cr),
+        return this.choice<Param_$0>([
+            () => this.matchParam_$0_1($$dpth + 1, $$cr),
+            () => this.matchParam_$0_2($$dpth + 1, $$cr),
         ]);
     }
-    public matchParam_$1_1($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$1_1> {
+    public matchParam_$0_1($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$0_1> {
         return this.regexAccept(String.raw`(?:,)`, "", $$dpth + 1, $$cr);
     }
-    public matchParam_$1_2($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$1_2> {
+    public matchParam_$0_2($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$0_2> {
         return this.noConsume<string>(() => this.regexAccept(String.raw`(?:\))`, "", $$dpth + 1, $$cr));
     }
     public matchReturnStmt($$dpth: number, $$cr?: ErrorTracker): Nullable<ReturnStmt> {
@@ -698,7 +691,7 @@ export class Parser {
                     && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$pos = this.mark()) !== null
                 ) {
-                    $$res = {kind: ASTKinds.IdentExpr, literal: $scope$literal, pos: $scope$pos};
+                    $$res = new IdentExpr($scope$literal, $scope$pos);
                 }
                 return $$res;
             });

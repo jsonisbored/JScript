@@ -24,7 +24,7 @@ FnStmt := _'fn '_
     _'{'_ stmts=Stmt* _'}'_
     pos=@ _
 Param := _ name='[a-zA-Z_][a-zA-Z0-9_]*'_
-    _{':\s*' &'[a-zA-Z_]'}? type='[a-zA-Z_][a-zA-Z0-9_]*'? _
+    _':'_ type='[a-zA-Z_][a-zA-Z0-9_]*' _
     {',' | &'\)'}
 ReturnStmt := _'return '_ expr=Expr _';'_ pos=@
 
@@ -49,6 +49,7 @@ StringExpr := _ literal='".*"'_ pos=@
     .value = string { return this.literal.slice(1, -1); }
     .type = string { return 'str'; }
 IdentExpr := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_ pos=@
+    .type = string { return 'idk'; }
 
 Ident := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_
 

@@ -1,5 +1,5 @@
-let a: num = "asdf";
-let mut b = "asdf";
+let a: str = "asdf";
+let mut b = 123;
 b = 2;
 
 1+2 *3 /2

@@ -4,7 +4,7 @@ import {
     Expr,
     Stmt,
     ASTKinds,
-    LetStmt,
+    ExprStmt,
 } from "../src/parser.ts";
 
 function error(input: string, line: number, offset: number, message: string) {
@@ -27,7 +27,7 @@ function error(input: string, line: number, offset: number, message: string) {
 
 enum ErrorKind {
     Type = "Type",
-    Validate = "Validate",
+    Semantic = "Semantic",
 }
 interface Error {
     kind: ErrorKind,
@@ -36,11 +36,102 @@ interface Error {
     message: string,
 }
 
-function type_check(ast: Program): Error[] {
+interface SemanticScope {
+    consts: Set<string>,
+    lets: Set<string>,
+    fns: Set<string>,
+}
+function semantic_checker(ast: Program): Error[] {
     const errors: Error[] = [];
-    const vars = new Map<string, LetStmt>();
+    // const consts = new Set<string>();
+    // const lets = new Set<string>();
+    // const fns = new Set<string>();
+    const scopes: SemanticScope[] = [{
+        consts: new Set(),
+        lets: new Set(),
+        fns: new Set(),
+    }];
+    let scope_index = 0;
 
     function stmt(s: Stmt) {
+        const scope = scopes[scope_index];
+        if (s.kind === ASTKinds.LetStmt) {
+            const name = s.ident.literal;
+            if (
+                scope.lets.has(name) ||
+                scope.consts.has(name) ||
+                scope.fns.has(name)
+            ) {
+                errors.push({
+                    kind: ErrorKind.Semantic,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Variable \`${name}\` already exists`
+                });
+            }
+            if (s.mut) {
+                scope.lets.add(name);
+            } else {
+                scope.consts.add(name);
+            }
+        } else if (s.kind === ASTKinds.AssignStmt) {
+            const name = s.ident.literal;
+            if (scope.consts.has(name)) {
+                errors.push({
+                    kind: ErrorKind.Semantic,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Cannont assign to \`${name}\` because it is immutable`
+                });
+            } else if (!scope.lets.has(name)) {
+                errors.push({
+                    kind: ErrorKind.Semantic,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Cannont find variable \`${name}\` in this scope`
+                });
+            }
+        } else if (s.kind === ASTKinds.FnStmt) {
+            const name = s.ident.literal;
+            if (scope.fns.has(name)) {
+                errors.push({
+                    kind: ErrorKind.Semantic,
+                    line: s.pos.line,
+                    offset: s.pos.offset,
+                    message: `Fn \`${name}\` has already been declared`
+                });
+            } else {
+                scope.fns.add(name);
+            }
+            scope_index ++;
+            scopes[scope_index] = Object.assign({}, scope);
+            s.stmts.forEach(stmt);
+            scope_index --;
+        }
+    }
+    // function expr(e: Expr) {
+
+    // }
+
+    for (const s of ast.stmts) {
+        stmt(s);
+    }
+
+    return errors;
+}
+
+interface TypeScope {
+    var_types: Record<string, string>,
+}
+function type_check(ast: Program): Error[] {
+    const errors: Error[] = [];
+    const scopes: TypeScope[] = [{
+        var_types: {},
+    }];
+    let scope_index = 0;
+
+    function stmt(s: Stmt) {
+        const scope = scopes[scope_index];
         if (s.kind === ASTKinds.LetStmt) {
             expr(s.expr);
             if (!s.type) {
@@ -53,21 +144,50 @@ function type_check(ast: Program): Error[] {
                     message: `Cannot assign type '${s.expr.type}' to type '${s.type}'`,
                 });
             }
-            vars.set(s.ident.literal, s);
+            scope.var_types[s.ident.literal] = s.type;
         } else if (s.kind === ASTKinds.AssignStmt) {
             expr(s.expr);
-            const v = vars.get(s.ident.literal);
-            if (s.expr.type !== v?.type) {
+            const v = scope.var_types[s.ident.literal];
+            if (s.expr.type !== v) {
                 errors.push({
                     kind: ErrorKind.Type,
                     line: s.pos.line,
                     offset: s.pos.offset,
-                    message: `Cannot assign type '${s.expr.type}' to type '${v?.type}'`,
+                    message: `Cannot assign type '${s.expr.type}' to type '${v}'`,
                 });
             }
+        } else if (s.kind === ASTKinds.FnStmt) {
+            scope_index ++;
+            scopes[scope_index] = JSON.parse(JSON.stringify(scope));
+            for (const p of s.params) {
+                scopes[scope_index].var_types[p.name] = p.type;
+            }
+            
+            s.stmts.forEach(stmt);
+            scope_index --;
+
+            s.stmts
+                .filter(s => s.kind === ASTKinds.ReturnStmt)
+                .map(s => (s as ExprStmt).expr) // Safe, filtered above
+                .forEach(e => {
+                    if (e.type !== s.return_type) {
+                        errors.push({
+                            kind: ErrorKind.Type,
+                            line: e.pos.line,
+                            offset: s.pos.offset,
+                            message: `Expected type '${s.return_type}' found type '${e.type}'`,
+                        });
+                    }
+                });
+        } else if (s.kind === ASTKinds.ReturnStmt) {
+            expr(s.expr);
+        } else if (s.kind === ASTKinds.ExprStmt) {
+            expr(s.expr);
         }
     }
     function expr(e: Expr): string {
+        const scope = scopes[scope_index];
+        
         if (
             e.kind === ASTKinds.StringExpr ||
             e.kind === ASTKinds.NumExpr ||
@@ -78,9 +198,13 @@ function type_check(ast: Program): Error[] {
             e.kind === ASTKinds.ProdExpr ||
             e.kind === ASTKinds.SumExpr
         ) {
+            const left = expr(e.left);
+            const right = expr(e.right);
+            e.type = left;
+
             if (
-                e.left.type === "num" &&
-                e.right.type !== "num"
+                left === "num" &&
+                right !== "num"
             ) {
                 errors.push({
                     kind: ErrorKind.Type,
@@ -90,8 +214,8 @@ function type_check(ast: Program): Error[] {
                 });
             } else if (
                 e.op === "+" &&
-                e.left.type === "str" &&
-                e.right.type !== "str"
+                left === "str" &&
+                right !== "str"
             ) {
                 errors.push({
                     kind: ErrorKind.Type,
@@ -101,61 +225,14 @@ function type_check(ast: Program): Error[] {
                 });
             }
             return e.type;
+        } else if (e.kind === ASTKinds.IdentExpr) {
+            const type = scope.var_types[e.literal] ?? "idk";
+            e.type = type;
+            return type;
         }
         return "idk";
     }
     
-    for (const s of ast.stmts) {
-        stmt(s);
-    }
-
-    return errors;
-}
-
-function validate(ast: Program): Error[] {
-    const errors: Error[] = [];
-    const consts = new Set<string>();
-    const lets = new Set<string>();
-
-    function stmt(s: Stmt) {
-        if (s.kind === ASTKinds.LetStmt) {
-            const name = s.ident.literal;
-            if (lets.has(name) || consts.has(name)) {
-                errors.push({
-                    kind: ErrorKind.Validate,
-                    line: s.pos.line,
-                    offset: s.pos.offset,
-                    message: `Variable \`${name}\` already exists`
-                });
-            }
-            if (s.mut) {
-                lets.add(name);
-            } else {
-                consts.add(name);
-            }
-        } else if (s.kind === ASTKinds.AssignStmt) {
-            const name = s.ident.literal;
-            if (consts.has(name)) {
-                errors.push({
-                    kind: ErrorKind.Validate,
-                    line: s.pos.line,
-                    offset: s.pos.offset,
-                    message: `Cannont assign to \`${name}\` because it is immutable`
-                });
-            } else if (!lets.has(name)) {
-                errors.push({
-                    kind: ErrorKind.Validate,
-                    line: s.pos.line,
-                    offset: s.pos.offset,
-                    message: `Cannont find variable \`${name}\` in this scope`
-                });
-            }
-        }
-    }
-    // function expr(e: Expr) {
-
-    // }
-
     for (const s of ast.stmts) {
         stmt(s);
     }
@@ -227,7 +304,7 @@ async function main() {
         return;
     }
 
-    const validate_errors = validate(ast);
+    const validate_errors = semantic_checker(ast);
     if (validate_errors.length) {
         for (const e of validate_errors) {
             error(input, e.line, e.offset, "Validate Error: "+e.message);
