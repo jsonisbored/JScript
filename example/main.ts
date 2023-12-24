@@ -5,7 +5,9 @@ import {
     Stmt,
     ASTKinds,
     ExprStmt,
+    Pattern,
 } from "../src/parser.ts";
+
 
 function error(input: string, line: number, offset: number, message: string) {
     const lines = input.split("\n");
@@ -53,39 +55,62 @@ function semantic_checker(ast: Program): Error[] {
     function stmt(s: Stmt) {
         const scope = scopes[scope_index];
         if (s.kind === ASTKinds.LetStmt) {
-            const name = s.ident.literal;
-            if (
-                scope.lets.has(name) ||
-                scope.consts.has(name) ||
-                scope.fns.has(name)
-            ) {
-                errors.push({
-                    kind: ErrorKind.Semantic,
-                    line: s.pos.line,
-                    offset: s.pos.offset,
-                    message: `Variable \`${name}\` already exists`
-                });
-            }
-            if (s.mut) {
-                scope.lets.add(name);
-            } else {
-                scope.consts.add(name);
+            const vars = s.pattern.kind === ASTKinds.Ident ?
+            [s.pattern.literal] :
+            s.pattern.items.map(i => i.literal)
+            
+            for (const name of vars) {
+                if (
+                    scope.lets.has(name) ||
+                    scope.consts.has(name) ||
+                    scope.fns.has(name)
+                ) {
+                    errors.push({
+                        kind: ErrorKind.Semantic,
+                        line: s.pos.line,
+                        offset: s.pos.offset,
+                        message: `Variable \`${name}\` already exists`
+                    });
+                }
+                if (s.mut) {
+                    scope.lets.add(name);
+                } else {
+                    scope.consts.add(name);
+                }
             }
         } else if (s.kind === ASTKinds.AssignStmt) {
-            const name = s.ident.literal;
-            if (scope.consts.has(name)) {
+            const constants: string[] = [];
+            const notfounds: string[] = [];
+            if (s.pattern.kind === ASTKinds.Ident) {
+                if (scope.consts.has(s.pattern.literal)) {
+                    constants.push(s.pattern.literal);
+                } else if (!scope.lets.has(s.pattern.literal)) {
+                    notfounds.push(s.pattern.literal);
+                }
+            } else if (s.pattern.kind === ASTKinds.ArrayPat) {
+                for (const {literal} of s.pattern.items) {
+                    if (scope.consts.has(literal)) {
+                        constants.push(literal);
+                    } else if (!scope.lets.has(literal)) {
+                        notfounds.push(literal);
+                    }
+                }
+            }
+
+            for (const c of constants) {
                 errors.push({
                     kind: ErrorKind.Semantic,
                     line: s.pos.line,
                     offset: s.pos.offset,
-                    message: `Cannont assign to \`${name}\` because it is immutable`
+                    message: `Cannont assign to \`${c}\` because it is immutable`,
                 });
-            } else if (!scope.lets.has(name)) {
+            }
+            for (const n of notfounds) {
                 errors.push({
                     kind: ErrorKind.Semantic,
                     line: s.pos.line,
                     offset: s.pos.offset,
-                    message: `Cannont find variable \`${name}\` in this scope`
+                    message: `Cannont find variable \`${n}\` in this scope`,
                 });
             }
         } else if (s.kind === ASTKinds.FnStmt) {
@@ -118,7 +143,7 @@ function semantic_checker(ast: Program): Error[] {
 }
 
 interface TypeScope {
-    var_types: Record<string, string>,
+    var_types: Record<string, { type: string }>,
 }
 function type_check(ast: Program): Error[] {
     const errors: Error[] = [];
@@ -141,23 +166,39 @@ function type_check(ast: Program): Error[] {
                     message: `Cannot assign type '${s.expr.type}' to type '${s.type}'`,
                 });
             }
-            scope.var_types[s.ident.literal] = s.type;
+
+            if (s.pattern.kind === ASTKinds.Ident) {
+                scope.var_types[s.pattern.literal] = s.pattern;
+            } else if (s.pattern.kind === ASTKinds.ArrayPat) {
+                for (const i of s.pattern.items) {
+                    scope.var_types[i.literal] = i;
+                }
+            }
         } else if (s.kind === ASTKinds.AssignStmt) {
             expr(s.expr);
-            const v = scope.var_types[s.ident.literal];
-            if (s.expr.type !== v) {
-                errors.push({
-                    kind: ErrorKind.Type,
-                    line: s.pos.line,
-                    offset: s.pos.offset,
-                    message: `Cannot assign type '${s.expr.type}' to type '${v}'`,
-                });
+
+            const vars = s.pattern.kind === ASTKinds.Ident ?
+                        [s.pattern.literal] :
+                        s.pattern.items.map(i => i.literal)
+                        
+            for (const v of vars) {
+                const t = scope.var_types[v];
+                if (t.type === "idk") {
+                    t.type = s.expr.type;
+                } else if (s.expr.type !== t.type) {
+                    errors.push({
+                        kind: ErrorKind.Type,
+                        line: s.pos.line,
+                        offset: s.pos.offset,
+                        message: `Cannot assign type '${s.expr.type}' to type '${v}'`,
+                    });
+                }
             }
         } else if (s.kind === ASTKinds.FnStmt) {
             scope_index ++;
             scopes[scope_index] = JSON.parse(JSON.stringify(scope));
             for (const p of s.params) {
-                scopes[scope_index].var_types[p.name] = p.type;
+                scopes[scope_index].var_types[p.name] = p;
             }
             
             s.stmts.forEach(stmt);
@@ -223,7 +264,7 @@ function type_check(ast: Program): Error[] {
             }
             return e.type;
         } else if (e.kind === ASTKinds.IdentExpr) {
-            const type = scope.var_types[e.literal] ?? "idk";
+            const type = scope.var_types[e.literal].type ?? "idk";
             e.type = type;
             return type;
         }
@@ -241,6 +282,17 @@ function generate(ast: Program): string {
     let output = "";
     let indent = "";
     
+    function pattern(p: Pattern): string {
+        if (p.kind === ASTKinds.Ident) {
+            return p.literal;
+        } else if (p.kind === ASTKinds.ArrayPat) {
+            return "["
+                +p.items.map(i => i.literal).join(", ")
+                +"]";
+        }
+        return "";
+    }
+
     function stmt(s: Stmt): string {
         let output = indent;
         if (s.kind === ASTKinds.CommentStmt) {
@@ -249,12 +301,12 @@ function generate(ast: Program): string {
             output += expr(s.expr);
         } else if (s.kind === ASTKinds.LetStmt) {
             output += (s.mut ? "let " : "const ")
-                +s.ident.literal
+                +pattern(s.pattern)
                 +" = "
                 +expr(s.expr)
                 +";";
         } else if (s.kind === ASTKinds.AssignStmt) {
-            output += s.ident.literal
+            output += pattern(s.pattern)
                 +" = "
                 +expr(s.expr)
                 +";";
@@ -299,6 +351,10 @@ function generate(ast: Program): string {
             output += e.literal;
         } else if (e.kind === ASTKinds.IdentExpr) {
             output += e.literal;
+        } else if (e.kind === ASTKinds.ArrayExpr) {
+            output += "["
+                +e.items.map(i => expr(i.expr)).join(",")
+                +"]";
         }
         return output;
     }
@@ -322,10 +378,10 @@ async function main() {
         return;
     }
 
-    const validate_errors = semantic_checker(ast);
-    if (validate_errors.length) {
-        for (const e of validate_errors) {
-            error(input, e.line, e.offset, "Validate Error: "+e.message);
+    const semantic_errors = semantic_checker(ast);
+    if (semantic_errors.length) {
+        for (const e of semantic_errors) {
+            error(input, e.line, e.offset, "Semantic Error: "+e.message);
         }
     }
     

@@ -9,12 +9,12 @@ Stmt := CommentStmt
 
 LetStmt := _'let '_
     mut='mut '?_
-    ident=Ident
+    pattern=Pattern
     _{':\s*' &'[a-zA-Z_]'}? type='[a-zA-Z_][a-zA-Z0-9_]*'?
     _'='_
     expr=Expr
     _';' pos=@ _
-AssignStmt := _ ident=Ident _'='_ expr=Expr _';' pos=@ _
+AssignStmt := _ pattern=Pattern _'='_ expr=Expr _';' pos=@ _
 CommentStmt := _ literal='//.*' pos=@ _
 ExprStmt := expr=Expr pos=@
 FnStmt := _'fn '_
@@ -25,16 +25,21 @@ FnStmt := _'fn '_
     pos=@ _
 Param := _ name='[a-zA-Z_][a-zA-Z0-9_]*'_
     _':'_ type='[a-zA-Z_][a-zA-Z0-9_]*' _
-    {',' | &'\)'}
+    {_','_ | &'\)'}
 ReturnStmt := _'return '_ expr=Expr _';'_ pos=@
 
-Expr := SumExpr
+Expr := ArrayExpr
+    | SumExpr
     | ProdExpr
     | GroupExpr
     | NumExpr
     | StringExpr
     | IdentExpr
 
+ArrayExpr := _'\['_ items=ArrayItem* _'\]'_ pos=@
+    .type = string { return items.length ? `List<${items[0].expr.type}>` : "idk"; }
+ArrayItem := expr=Expr {_','_ | &'\]'}
+// RangeExpr := 
 SumExpr := left=Expr _ op='\+|-'_ right=Expr pos=@
     .type = string { return this.left.type; }
 ProdExpr := left=Expr _ op='\*|/'_ right=Expr pos=@
@@ -51,6 +56,12 @@ StringExpr := _ literal='".*"'_ pos=@
 IdentExpr := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_ pos=@
     .type = string { return 'idk'; }
 
+Pattern := Ident
+    | ArrayPat
+ArrayPat := _'\['_ items=ArrayPatItem* _'\]'_
+ArrayPatItem := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_  {_','_ | &'\]'}
+    .type = string { return 'idk'; }
 Ident := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_
+    .type = string { return 'idk'; }
 
 _ := '\s*'
