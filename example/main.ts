@@ -43,9 +43,6 @@ interface SemanticScope {
 }
 function semantic_checker(ast: Program): Error[] {
     const errors: Error[] = [];
-    // const consts = new Set<string>();
-    // const lets = new Set<string>();
-    // const fns = new Set<string>();
     const scopes: SemanticScope[] = [{
         consts: new Set(),
         lets: new Set(),
@@ -242,9 +239,10 @@ function type_check(ast: Program): Error[] {
 
 function generate(ast: Program): string {
     let output = "";
+    let indent = "";
     
     function stmt(s: Stmt): string {
-        let output = "";
+        let output = indent;
         if (s.kind === ASTKinds.CommentStmt) {
             output += s.literal;
         } else if (s.kind === ASTKinds.ExprStmt) {
@@ -260,6 +258,20 @@ function generate(ast: Program): string {
                 +" = "
                 +expr(s.expr)
                 +";";
+        } else if (s.kind === ASTKinds.ReturnStmt) {
+            output += "return "
+                +expr(s.expr)
+                +";";
+        } else if (s.kind === ASTKinds.FnStmt) {
+            output += "function "
+                +s.ident.literal
+                +"("
+                +s.params.map(p => p.name).join(", ")
+                +") {\n"
+            indent += "\t";
+            output += s.stmts.map(stmt).join("\n")
+            indent = indent.slice(0, -1);
+            output += "\n}";
         }
         return output;
     }
@@ -267,11 +279,15 @@ function generate(ast: Program): string {
         let output = "";
         if (e.kind === ASTKinds.SumExpr) {
             output += expr(e.left)
+                +" "
                 +e.op
+                +" "
                 +expr(e.right);
         } else if (e.kind === ASTKinds.ProdExpr) {
             output += expr(e.left)
+                +" "
                 +e.op
+                +" "
                 +expr(e.right);
         } else if (e.kind === ASTKinds.GroupExpr) {
             output += "("
@@ -280,6 +296,8 @@ function generate(ast: Program): string {
         } else if (e.kind === ASTKinds.NumExpr) {
             output += e.value;
         } else if (e.kind === ASTKinds.StringExpr) {
+            output += e.literal;
+        } else if (e.kind === ASTKinds.IdentExpr) {
             output += e.literal;
         }
         return output;
