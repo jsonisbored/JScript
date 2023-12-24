@@ -8,15 +8,18 @@ import {
 } from "../src/parser.ts";
 
 function error(input: string, line: number, offset: number, message: string) {
+    const lines = input.split("\n");
+    const max_pad = Math.ceil(Math.log10(lines.length+1));
+    
     const start = Math.max(line-5, 0);
-    const end = Math.min(line, input.split("\n").length);
-    const msg = input
-        .split("\n")
-        .map((s, i) => `${i+1}  |  ${s}`)
+    const end = Math.min(line, lines.length);
+    const msg = lines
+        .map((s, i) => `${(i+1+"").padEnd(max_pad, " ")} |  ${s}`)
         .splice(start, end)
         .join("\n")
-        + "\n"
-        +  "   |  " + "^".padStart(offset+1, " ")
+        +"\n"
+        +" ".repeat(max_pad)+" |  "
+        +"^".padStart(offset+1, " ")
         +"\n"
         +message;
     console.error(msg);
