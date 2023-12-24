@@ -1,4 +1,4 @@
-# RustScript
+# JScript
 Name is temporary
 
 The goal of this language is to address a lot of the pain points of JavaScript. Using the same approach as TypeScript but not stopping at types. Rust has obviously been the main inspiration for ideas. Ideally the language will feel a lot like Rust without the borrow checker.
