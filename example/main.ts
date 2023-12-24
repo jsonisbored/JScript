@@ -15,7 +15,7 @@ function error(input: string, line: number, offset: number, message: string) {
     const end = Math.min(line, lines.length);
     const msg = lines
         .map((s, i) => `${(i+1+"").padEnd(max_pad, " ")} |  ${s}`)
-        .splice(start, end)
+        .slice(start, end)
         .join("\n")
         +"\n"
         +" ".repeat(max_pad)+" |  "
