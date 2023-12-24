@@ -221,6 +221,7 @@ async function main() {
     const { ast, errs } = parse(input);
     if (errs.length || !ast) {
         for (const e of errs) {
+            console.error(e);
             error(input, e.pos.line, e.pos.offset, "Syntax Error: ");
         }
         return;

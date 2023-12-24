@@ -2,9 +2,11 @@
 * INPUT GRAMMAR:
 * Program := stmts=Stmt* $
 * Stmt := CommentStmt
-*     | ExprStmt
 *     | LetStmt
 *     | AssignStmt
+*     | FnStmt
+*     | ReturnStmt
+*     | ExprStmt
 * LetStmt := _'let '_
 *     mut='mut '?_
 *     ident=Ident
@@ -15,12 +17,22 @@
 * AssignStmt := _ ident=Ident _'='_ expr=Expr _';' pos=@ _
 * CommentStmt := _ literal='//.*' pos=@ _
 * ExprStmt := expr=Expr pos=@
-* FnStmt := _'fn '_ ident=Ident _'\('_ params='[a-zA-Z_][a-zA-Z0-9_]*'* _'\)' pos=@ _
+* FnStmt := _'fn '_
+*     ident=Ident
+*     _'\('_ params=Param* _'\)'_
+*     _{':\s*' &'[a-zA-Z_]'}? return_type='[a-zA-Z_][a-zA-Z0-9_]*'?
+*     _'{'_ stmts=Stmt* _'}'_
+*     pos=@ _
+* Param := _ name='[a-zA-Z_][a-zA-Z0-9_]*'_
+*     _{':\s*' &'[a-zA-Z_]'}? type='[a-zA-Z_][a-zA-Z0-9_]*'? _
+*     {',' | &'\)'}
+* ReturnStmt := _'return '_ expr=Expr _';'_ pos=@
 * Expr := SumExpr
 *     | ProdExpr
 *     | GroupExpr
 *     | NumExpr
 *     | StringExpr
+*     | IdentExpr
 * SumExpr := left=Expr _ op='\+|-'_ right=Expr pos=@
 *     .type = string { return this.left.type; }
 * ProdExpr := left=Expr _ op='\*|/'_ right=Expr pos=@
@@ -30,9 +42,10 @@
 * NumExpr := _ literal='[0-9]+(\.[0-9]+)?' pos=@ _
 *     .value = number { return Number(this.literal); }
 *     .type = string { return 'num'; }
-* StringExpr := _ literal='".*"' _ pos=@
+* StringExpr := _ literal='".*"'_ pos=@
 *     .value = string { return this.literal.slice(1, -1); }
 *     .type = string { return 'str'; }
+* IdentExpr := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_ pos=@
 * Ident := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_
 * _ := '\s*'
 */
@@ -47,22 +60,32 @@ export enum ASTKinds {
     Stmt_2 = "Stmt_2",
     Stmt_3 = "Stmt_3",
     Stmt_4 = "Stmt_4",
+    Stmt_5 = "Stmt_5",
+    Stmt_6 = "Stmt_6",
     LetStmt = "LetStmt",
     LetStmt_$0 = "LetStmt_$0",
     AssignStmt = "AssignStmt",
     CommentStmt = "CommentStmt",
     ExprStmt = "ExprStmt",
     FnStmt = "FnStmt",
+    FnStmt_$0 = "FnStmt_$0",
+    Param = "Param",
+    Param_$0 = "Param_$0",
+    Param_$1_1 = "Param_$1_1",
+    Param_$1_2 = "Param_$1_2",
+    ReturnStmt = "ReturnStmt",
     Expr_1 = "Expr_1",
     Expr_2 = "Expr_2",
     Expr_3 = "Expr_3",
     Expr_4 = "Expr_4",
     Expr_5 = "Expr_5",
+    Expr_6 = "Expr_6",
     SumExpr = "SumExpr",
     ProdExpr = "ProdExpr",
     GroupExpr = "GroupExpr",
     NumExpr = "NumExpr",
     StringExpr = "StringExpr",
+    IdentExpr = "IdentExpr",
     Ident = "Ident",
     _ = "_",
     $EOF = "$EOF",
@@ -71,11 +94,13 @@ export interface Program {
     kind: ASTKinds.Program;
     stmts: Stmt[];
 }
-export type Stmt = Stmt_1 | Stmt_2 | Stmt_3 | Stmt_4;
+export type Stmt = Stmt_1 | Stmt_2 | Stmt_3 | Stmt_4 | Stmt_5 | Stmt_6;
 export type Stmt_1 = CommentStmt;
-export type Stmt_2 = ExprStmt;
-export type Stmt_3 = LetStmt;
-export type Stmt_4 = AssignStmt;
+export type Stmt_2 = LetStmt;
+export type Stmt_3 = AssignStmt;
+export type Stmt_4 = FnStmt;
+export type Stmt_5 = ReturnStmt;
+export type Stmt_6 = ExprStmt;
 export interface LetStmt {
     kind: ASTKinds.LetStmt;
     mut: Nullable<string>;
@@ -106,15 +131,37 @@ export interface ExprStmt {
 export interface FnStmt {
     kind: ASTKinds.FnStmt;
     ident: Ident;
-    params: string[];
+    params: Param[];
+    return_type: Nullable<string>;
+    stmts: Stmt[];
     pos: PosInfo;
 }
-export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5;
+export interface FnStmt_$0 {
+    kind: ASTKinds.FnStmt_$0;
+}
+export interface Param {
+    kind: ASTKinds.Param;
+    name: string;
+    type: Nullable<string>;
+}
+export interface Param_$0 {
+    kind: ASTKinds.Param_$0;
+}
+export type Param_$1 = Param_$1_1 | Param_$1_2;
+export type Param_$1_1 = string;
+export type Param_$1_2 = string;
+export interface ReturnStmt {
+    kind: ASTKinds.ReturnStmt;
+    expr: Expr;
+    pos: PosInfo;
+}
+export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5 | Expr_6;
 export type Expr_1 = SumExpr;
 export type Expr_2 = ProdExpr;
 export type Expr_3 = GroupExpr;
 export type Expr_4 = NumExpr;
 export type Expr_5 = StringExpr;
+export type Expr_6 = IdentExpr;
 export class SumExpr {
     public kind: ASTKinds.SumExpr = ASTKinds.SumExpr;
     public left: Expr;
@@ -196,6 +243,11 @@ export class StringExpr {
         })();
     }
 }
+export interface IdentExpr {
+    kind: ASTKinds.IdentExpr;
+    literal: string;
+    pos: PosInfo;
+}
 export interface Ident {
     kind: ASTKinds.Ident;
     literal: string;
@@ -240,19 +292,27 @@ export class Parser {
             () => this.matchStmt_2($$dpth + 1, $$cr),
             () => this.matchStmt_3($$dpth + 1, $$cr),
             () => this.matchStmt_4($$dpth + 1, $$cr),
+            () => this.matchStmt_5($$dpth + 1, $$cr),
+            () => this.matchStmt_6($$dpth + 1, $$cr),
         ]);
     }
     public matchStmt_1($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_1> {
         return this.matchCommentStmt($$dpth + 1, $$cr);
     }
     public matchStmt_2($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_2> {
-        return this.matchExprStmt($$dpth + 1, $$cr);
-    }
-    public matchStmt_3($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_3> {
         return this.matchLetStmt($$dpth + 1, $$cr);
     }
-    public matchStmt_4($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_4> {
+    public matchStmt_3($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_3> {
         return this.matchAssignStmt($$dpth + 1, $$cr);
+    }
+    public matchStmt_4($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_4> {
+        return this.matchFnStmt($$dpth + 1, $$cr);
+    }
+    public matchStmt_5($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_5> {
+        return this.matchReturnStmt($$dpth + 1, $$cr);
+    }
+    public matchStmt_6($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_6> {
+        return this.matchExprStmt($$dpth + 1, $$cr);
     }
     public matchLetStmt($$dpth: number, $$cr?: ErrorTracker): Nullable<LetStmt> {
         return this.run<LetStmt>($$dpth,
@@ -360,7 +420,9 @@ export class Parser {
         return this.run<FnStmt>($$dpth,
             () => {
                 let $scope$ident: Nullable<Ident>;
-                let $scope$params: Nullable<string[]>;
+                let $scope$params: Nullable<Param[]>;
+                let $scope$return_type: Nullable<Nullable<string>>;
+                let $scope$stmts: Nullable<Stmt[]>;
                 let $scope$pos: Nullable<PosInfo>;
                 let $$res: Nullable<FnStmt> = null;
                 if (true
@@ -371,13 +433,104 @@ export class Parser {
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:\()`, "", $$dpth + 1, $$cr) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && ($scope$params = this.loop<string>(() => this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr), 0, -1)) !== null
+                    && ($scope$params = this.loop<Param>(() => this.matchParam($$dpth + 1, $$cr), 0, -1)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:\))`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ((this.matchFnStmt_$0($$dpth + 1, $$cr)) || true)
+                    && (($scope$return_type = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr)) || true)
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:{)`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$stmts = this.loop<Stmt>(() => this.matchStmt($$dpth + 1, $$cr), 0, -1)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:})`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$pos = this.mark()) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                 ) {
-                    $$res = {kind: ASTKinds.FnStmt, ident: $scope$ident, params: $scope$params, pos: $scope$pos};
+                    $$res = {kind: ASTKinds.FnStmt, ident: $scope$ident, params: $scope$params, return_type: $scope$return_type, stmts: $scope$stmts, pos: $scope$pos};
+                }
+                return $$res;
+            });
+    }
+    public matchFnStmt_$0($$dpth: number, $$cr?: ErrorTracker): Nullable<FnStmt_$0> {
+        return this.run<FnStmt_$0>($$dpth,
+            () => {
+                let $$res: Nullable<FnStmt_$0> = null;
+                if (true
+                    && this.regexAccept(String.raw`(?::\s*)`, "", $$dpth + 1, $$cr) !== null
+                    && this.noConsume<string>(() => this.regexAccept(String.raw`(?:[a-zA-Z_])`, "", $$dpth + 1, $$cr)) !== null
+                ) {
+                    $$res = {kind: ASTKinds.FnStmt_$0, };
+                }
+                return $$res;
+            });
+    }
+    public matchParam($$dpth: number, $$cr?: ErrorTracker): Nullable<Param> {
+        return this.run<Param>($$dpth,
+            () => {
+                let $scope$name: Nullable<string>;
+                let $scope$type: Nullable<Nullable<string>>;
+                let $$res: Nullable<Param> = null;
+                if (true
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$name = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ((this.matchParam_$0($$dpth + 1, $$cr)) || true)
+                    && (($scope$type = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr)) || true)
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.matchParam_$1($$dpth + 1, $$cr) !== null
+                ) {
+                    $$res = {kind: ASTKinds.Param, name: $scope$name, type: $scope$type};
+                }
+                return $$res;
+            });
+    }
+    public matchParam_$0($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$0> {
+        return this.run<Param_$0>($$dpth,
+            () => {
+                let $$res: Nullable<Param_$0> = null;
+                if (true
+                    && this.regexAccept(String.raw`(?::\s*)`, "", $$dpth + 1, $$cr) !== null
+                    && this.noConsume<string>(() => this.regexAccept(String.raw`(?:[a-zA-Z_])`, "", $$dpth + 1, $$cr)) !== null
+                ) {
+                    $$res = {kind: ASTKinds.Param_$0, };
+                }
+                return $$res;
+            });
+    }
+    public matchParam_$1($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$1> {
+        return this.choice<Param_$1>([
+            () => this.matchParam_$1_1($$dpth + 1, $$cr),
+            () => this.matchParam_$1_2($$dpth + 1, $$cr),
+        ]);
+    }
+    public matchParam_$1_1($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$1_1> {
+        return this.regexAccept(String.raw`(?:,)`, "", $$dpth + 1, $$cr);
+    }
+    public matchParam_$1_2($$dpth: number, $$cr?: ErrorTracker): Nullable<Param_$1_2> {
+        return this.noConsume<string>(() => this.regexAccept(String.raw`(?:\))`, "", $$dpth + 1, $$cr));
+    }
+    public matchReturnStmt($$dpth: number, $$cr?: ErrorTracker): Nullable<ReturnStmt> {
+        return this.run<ReturnStmt>($$dpth,
+            () => {
+                let $scope$expr: Nullable<Expr>;
+                let $scope$pos: Nullable<PosInfo>;
+                let $$res: Nullable<ReturnStmt> = null;
+                if (true
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:return )`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$expr = this.matchExpr($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:;)`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$pos = this.mark()) !== null
+                ) {
+                    $$res = {kind: ASTKinds.ReturnStmt, expr: $scope$expr, pos: $scope$pos};
                 }
                 return $$res;
             });
@@ -390,6 +543,7 @@ export class Parser {
                 () => this.matchExpr_3($$dpth + 1, $$cr),
                 () => this.matchExpr_4($$dpth + 1, $$cr),
                 () => this.matchExpr_5($$dpth + 1, $$cr),
+                () => this.matchExpr_6($$dpth + 1, $$cr),
             ]);
         };
         const $scope$pos = this.mark();
@@ -431,6 +585,9 @@ export class Parser {
     }
     public matchExpr_5($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_5> {
         return this.matchStringExpr($$dpth + 1, $$cr);
+    }
+    public matchExpr_6($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_6> {
+        return this.matchIdentExpr($$dpth + 1, $$cr);
     }
     public matchSumExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<SumExpr> {
         return this.run<SumExpr>($$dpth,
@@ -525,6 +682,23 @@ export class Parser {
                     && ($scope$pos = this.mark()) !== null
                 ) {
                     $$res = new StringExpr($scope$literal, $scope$pos);
+                }
+                return $$res;
+            });
+    }
+    public matchIdentExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<IdentExpr> {
+        return this.run<IdentExpr>($$dpth,
+            () => {
+                let $scope$literal: Nullable<string>;
+                let $scope$pos: Nullable<PosInfo>;
+                let $$res: Nullable<IdentExpr> = null;
+                if (true
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$literal = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*)`, "", $$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$pos = this.mark()) !== null
+                ) {
+                    $$res = {kind: ASTKinds.IdentExpr, literal: $scope$literal, pos: $scope$pos};
                 }
                 return $$res;
             });

@@ -8,3 +8,8 @@ b = 2;
 
 2+2
 // I hope so
+
+fn add(a: num, b: num): num {
+    return a + b;
+}
+
