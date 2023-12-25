@@ -10,7 +10,8 @@ Building a language while learning at the same time. JScript transpiles to JavaS
 1. Parsing, checking, and generating
     - ✓ | Basic expressions
     - ✓ | Let, fn, assign statements
-    - ✓ | Destructuring
+    - ✓ | Arrays with destructuring
+    - ✗ | Syntax for ranges
     - ✗ | Control flow
     - ✗ | Structs
     - ✗ | Enums
