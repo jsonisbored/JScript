@@ -353,7 +353,7 @@ function generate(ast: Program): string {
             output += e.literal;
         } else if (e.kind === ASTKinds.ArrayExpr) {
             output += "["
-                +e.items.map(i => expr(i.expr)).join(",")
+                +e.items.map(i => expr(i.expr)).join(", ")
                 +"]";
         }
         return output;
