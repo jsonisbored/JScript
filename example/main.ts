@@ -28,8 +28,9 @@ function error(input: string, line: number, offset: number, message: string) {
 }
 
 enum ErrorKind {
-    Type = "Type",
     Semantic = "Semantic",
+    Transform = "Transform",
+    Type = "Type",
 }
 interface Error {
     kind: ErrorKind,
@@ -134,6 +135,61 @@ function semantic_checker(ast: Program): Error[] {
     // function expr(e: Expr) {
 
     // }
+
+    for (const s of ast.stmts) {
+        stmt(s);
+    }
+
+    return errors;
+}
+
+function transform(ast: Program): Error[] {
+    const errors: Error[] = [];
+
+    function stmt(s: Stmt): Stmt {
+        if (
+            s.kind === ASTKinds.LetStmt ||
+            s.kind === ASTKinds.AssignStmt || 
+            s.kind === ASTKinds.ReturnStmt || 
+            s.kind === ASTKinds.ExprStmt
+        ) {
+            s.expr = expr(s.expr);
+            return s;
+        } else if (s.kind === ASTKinds.FnStmt) {
+            s.stmts = s.stmts.map(stmt);
+            return s;
+        }
+        return s;
+    }
+
+    function expr(e: Expr): Expr {
+        if (e.kind === ASTKinds.ArrayExpr) {
+            e.items.forEach(i => i.expr = expr(i.expr));
+            return e;
+        } else if (
+            e.kind === ASTKinds.SumExpr ||
+            e.kind === ASTKinds.ProdExpr
+        ) {
+            e.left = expr(e.left);
+            e.right = expr(e.right);
+            return e;
+        } else if (
+            e.kind === ASTKinds.GroupExpr
+        ) {
+            e.expr = expr(e.expr);
+            return e;
+        } else if (
+            e.kind === ASTKinds.NumExpr ||
+            e.kind === ASTKinds.StringExpr ||
+            e.kind === ASTKinds.IdentExpr
+        ) {
+            return e;
+        } else if (e.kind === ASTKinds.RangeExpr) {
+            e.min = expr(e.min);
+            e.max = expr(e.max);
+        }
+        return e;
+    }
 
     for (const s of ast.stmts) {
         stmt(s);
@@ -267,6 +323,29 @@ function type_check(ast: Program): Error[] {
             const type = scope.var_types[e.literal].type ?? "idk";
             e.type = type;
             return type;
+        } else if (e.kind === ASTKinds.ArrayExpr) {
+            const type = e.type.match(/<([A-z]+)>/);
+            if (!type) {
+                errors.push({
+                    kind: ErrorKind.Type,
+                    line: e.pos.line,
+                    offset: e.pos.offset,
+                    message: `Compiler error`,
+                });
+            } else {
+                for (const i of e.items) {
+                    const ie = expr(i.expr);
+                    if (ie !== type[1]) {
+                        errors.push({
+                            kind: ErrorKind.Type,
+                            line: e.pos.line,
+                            offset: e.pos.offset,
+                            message: `Item of type '${ie}' does not match '${type[1]}'`,
+                        });
+                    }
+                }
+            }
+            
         }
         return "idk";
     }
@@ -355,6 +434,26 @@ function generate(ast: Program): string {
             output += "["
                 +e.items.map(i => expr(i.expr)).join(", ")
                 +"]";
+        } else if (e.kind === ASTKinds.RangeExpr) {
+            if (
+                e.min.kind === ASTKinds.NumExpr &&
+                e.max.kind === ASTKinds.NumExpr
+            ) {
+                const min = e.min.value;
+                const max = e.max.value + (e.inclusive ? 1 : 0);
+
+                output += '['
+                    +new Array(max - min)
+                        .fill(0)
+                        .map((_, i) => i+min)
+                        .join(", ")
+                    +']';
+            } else {
+                const min = expr(e.min);
+                const max = expr(e.max) + (e.inclusive ? "1" : "");
+                
+                output += `Array(${max}-${min}).fill(0).map((_, i) => i+${min})`;
+            }
         }
         return output;
     }
@@ -367,7 +466,7 @@ function generate(ast: Program): string {
 }
 
 async function main() {
-    const input = await Deno.readTextFile("./example/test.rus");
+    const input = await Deno.readTextFile("./example/test.j");
 
     const { ast, errs } = parse(input);
     if (errs.length || !ast) {
@@ -378,18 +477,14 @@ async function main() {
         return;
     }
 
-    const semantic_errors = semantic_checker(ast);
-    if (semantic_errors.length) {
-        for (const e of semantic_errors) {
-            error(input, e.line, e.offset, "Semantic Error: "+e.message);
-        }
-    }
+    const errors: Error[] = [];
+
+    errors.concat(semantic_checker(ast));
+    // errors.concat(transform(ast));
+    errors.concat(type_check(ast));
     
-    const type_errors = type_check(ast);
-    if (type_errors.length) {
-        for (const e of type_errors) {
-            error(input, e.line, e.offset, "Type Error: "+e.message);
-        }
+    for (const e of errors) {
+        error(input, e.line, e.offset, "Type Error: "+e.message);
     }
 
     const output = generate(ast);

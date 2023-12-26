@@ -31,19 +31,21 @@
 *     | SumExpr
 *     | ProdExpr
 *     | GroupExpr
+*     | RangeExpr
 *     | NumExpr
 *     | StringExpr
 *     | IdentExpr
 * ArrayExpr := _'\['_ items=ArrayItem* _'\]'_ pos=@
-*     .type = string { return items.length ? `List<${items[0].expr.type}>` : "idk"; }
+*     .type = string { return items.length ? `Array<${items[0].expr.type}>` : "idk"; }
 * ArrayItem := expr=Expr {_','_ | &'\]'}
-* // RangeExpr := 
 * SumExpr := left=Expr _ op='\+|-'_ right=Expr pos=@
 *     .type = string { return this.left.type; }
 * ProdExpr := left=Expr _ op='\*|/'_ right=Expr pos=@
 *     .type = string { return this.left.type; }
 * GroupExpr := _'\('_ expr=Expr _'\)'_ pos=@
 *     .type = string { return this.expr.type; }
+* RangeExpr := min=Expr _'\.\.'_ inclusive='='? max=Expr pos=@
+*     .type = string { return 'Array<num>'; }
 * NumExpr := _ literal='[0-9]+(\.[0-9]+)?' pos=@ _
 *     .value = number { return Number(this.literal); }
 *     .type = string { return 'num'; }
@@ -92,6 +94,7 @@ export enum ASTKinds {
     Expr_5 = "Expr_5",
     Expr_6 = "Expr_6",
     Expr_7 = "Expr_7",
+    Expr_8 = "Expr_8",
     ArrayExpr = "ArrayExpr",
     ArrayItem = "ArrayItem",
     ArrayItem_$0_1 = "ArrayItem_$0_1",
@@ -99,6 +102,7 @@ export enum ASTKinds {
     SumExpr = "SumExpr",
     ProdExpr = "ProdExpr",
     GroupExpr = "GroupExpr",
+    RangeExpr = "RangeExpr",
     NumExpr = "NumExpr",
     StringExpr = "StringExpr",
     IdentExpr = "IdentExpr",
@@ -176,14 +180,15 @@ export interface ReturnStmt {
     expr: Expr;
     pos: PosInfo;
 }
-export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5 | Expr_6 | Expr_7;
+export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5 | Expr_6 | Expr_7 | Expr_8;
 export type Expr_1 = ArrayExpr;
 export type Expr_2 = SumExpr;
 export type Expr_3 = ProdExpr;
 export type Expr_4 = GroupExpr;
-export type Expr_5 = NumExpr;
-export type Expr_6 = StringExpr;
-export type Expr_7 = IdentExpr;
+export type Expr_5 = RangeExpr;
+export type Expr_6 = NumExpr;
+export type Expr_7 = StringExpr;
+export type Expr_8 = IdentExpr;
 export class ArrayExpr {
     public kind: ASTKinds.ArrayExpr = ASTKinds.ArrayExpr;
     public items: ArrayItem[];
@@ -193,7 +198,7 @@ export class ArrayExpr {
         this.items = items;
         this.pos = pos;
         this.type = ((): string => {
-        return items.length ? `List<${items[0].expr.type}>` : "idk";
+        return items.length ? `Array<${items[0].expr.type}>` : "idk";
         })();
     }
 }
@@ -250,6 +255,23 @@ export class GroupExpr {
         this.pos = pos;
         this.type = ((): string => {
         return this.expr.type;
+        })();
+    }
+}
+export class RangeExpr {
+    public kind: ASTKinds.RangeExpr = ASTKinds.RangeExpr;
+    public min: Expr;
+    public inclusive: Nullable<string>;
+    public max: Expr;
+    public pos: PosInfo;
+    public type: string;
+    constructor(min: Expr, inclusive: Nullable<string>, max: Expr, pos: PosInfo){
+        this.min = min;
+        this.inclusive = inclusive;
+        this.max = max;
+        this.pos = pos;
+        this.type = ((): string => {
+        return 'Array<num>';
         })();
     }
 }
@@ -626,6 +648,7 @@ export class Parser {
                 () => this.matchExpr_5($$dpth + 1, $$cr),
                 () => this.matchExpr_6($$dpth + 1, $$cr),
                 () => this.matchExpr_7($$dpth + 1, $$cr),
+                () => this.matchExpr_8($$dpth + 1, $$cr),
             ]);
         };
         const $scope$pos = this.mark();
@@ -666,12 +689,15 @@ export class Parser {
         return this.matchGroupExpr($$dpth + 1, $$cr);
     }
     public matchExpr_5($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_5> {
-        return this.matchNumExpr($$dpth + 1, $$cr);
+        return this.matchRangeExpr($$dpth + 1, $$cr);
     }
     public matchExpr_6($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_6> {
-        return this.matchStringExpr($$dpth + 1, $$cr);
+        return this.matchNumExpr($$dpth + 1, $$cr);
     }
     public matchExpr_7($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_7> {
+        return this.matchStringExpr($$dpth + 1, $$cr);
+    }
+    public matchExpr_8($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_8> {
         return this.matchIdentExpr($$dpth + 1, $$cr);
     }
     public matchArrayExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<ArrayExpr> {
@@ -791,6 +817,28 @@ export class Parser {
                     && ($scope$pos = this.mark()) !== null
                 ) {
                     $$res = new GroupExpr($scope$expr, $scope$pos);
+                }
+                return $$res;
+            });
+    }
+    public matchRangeExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<RangeExpr> {
+        return this.run<RangeExpr>($$dpth,
+            () => {
+                let $scope$min: Nullable<Expr>;
+                let $scope$inclusive: Nullable<Nullable<string>>;
+                let $scope$max: Nullable<Expr>;
+                let $scope$pos: Nullable<PosInfo>;
+                let $$res: Nullable<RangeExpr> = null;
+                if (true
+                    && ($scope$min = this.matchExpr($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:\.\.)`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && (($scope$inclusive = this.regexAccept(String.raw`(?:=)`, "", $$dpth + 1, $$cr)) || true)
+                    && ($scope$max = this.matchExpr($$dpth + 1, $$cr)) !== null
+                    && ($scope$pos = this.mark()) !== null
+                ) {
+                    $$res = new RangeExpr($scope$min, $scope$inclusive, $scope$max, $scope$pos);
                 }
                 return $$res;
             });

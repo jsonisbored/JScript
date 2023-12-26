@@ -1,3 +1,3 @@
-let asdf = [1, 2, 3];
-let [a, b, c] = asdf;
-
+let asdf = 1..=9;
+let [one] = asdf;
+let aocw = one..asdf[-1];
