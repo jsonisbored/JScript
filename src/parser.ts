@@ -34,6 +34,8 @@
 *     | RangeExpr
 *     | NumExpr
 *     | StringExpr
+*     | GetFieldExpr
+*     | GetIndexExpr
 *     | IdentExpr
 * ArrayExpr := _'\['_ items=ArrayItem* _'\]'_ pos=@
 *     .type = string { return items.length ? `Array<${items[0].expr.type}>` : "idk"; }
@@ -44,9 +46,13 @@
 *     .type = string { return this.left.type; }
 * GroupExpr := _'\('_ expr=Expr _'\)'_ pos=@
 *     .type = string { return this.expr.type; }
-* RangeExpr := min=Expr _'\.\.'_ inclusive='='? max=Expr pos=@
-*     .type = string { return 'Array<num>'; }
-* NumExpr := _ literal='[0-9]+(\.[0-9]+)?' pos=@ _
+* GetFieldExpr := expr=Expr _'\.'_ field='[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+'_ pos=@
+*     .type = string { return "idk"; }
+* GetIndexExpr := expr=Expr _'\['_ index=Expr _'\]'_ pos=@ 
+*     .type = string { return "idk"; }
+* RangeExpr := min=Expr _'\.\.' inclusive='='? _ max=Expr pos=@
+*     .type = string { return 'Range<num>'; }
+* NumExpr := _ literal='-?[0-9]+(\.[0-9]+)?' pos=@ _
 *     .value = number { return Number(this.literal); }
 *     .type = string { return 'num'; }
 * StringExpr := _ literal='".*"'_ pos=@
@@ -95,6 +101,8 @@ export enum ASTKinds {
     Expr_6 = "Expr_6",
     Expr_7 = "Expr_7",
     Expr_8 = "Expr_8",
+    Expr_9 = "Expr_9",
+    Expr_10 = "Expr_10",
     ArrayExpr = "ArrayExpr",
     ArrayItem = "ArrayItem",
     ArrayItem_$0_1 = "ArrayItem_$0_1",
@@ -102,6 +110,8 @@ export enum ASTKinds {
     SumExpr = "SumExpr",
     ProdExpr = "ProdExpr",
     GroupExpr = "GroupExpr",
+    GetFieldExpr = "GetFieldExpr",
+    GetIndexExpr = "GetIndexExpr",
     RangeExpr = "RangeExpr",
     NumExpr = "NumExpr",
     StringExpr = "StringExpr",
@@ -180,7 +190,7 @@ export interface ReturnStmt {
     expr: Expr;
     pos: PosInfo;
 }
-export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5 | Expr_6 | Expr_7 | Expr_8;
+export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5 | Expr_6 | Expr_7 | Expr_8 | Expr_9 | Expr_10;
 export type Expr_1 = ArrayExpr;
 export type Expr_2 = SumExpr;
 export type Expr_3 = ProdExpr;
@@ -188,7 +198,9 @@ export type Expr_4 = GroupExpr;
 export type Expr_5 = RangeExpr;
 export type Expr_6 = NumExpr;
 export type Expr_7 = StringExpr;
-export type Expr_8 = IdentExpr;
+export type Expr_8 = GetFieldExpr;
+export type Expr_9 = GetIndexExpr;
+export type Expr_10 = IdentExpr;
 export class ArrayExpr {
     public kind: ASTKinds.ArrayExpr = ASTKinds.ArrayExpr;
     public items: ArrayItem[];
@@ -258,6 +270,36 @@ export class GroupExpr {
         })();
     }
 }
+export class GetFieldExpr {
+    public kind: ASTKinds.GetFieldExpr = ASTKinds.GetFieldExpr;
+    public expr: Expr;
+    public field: string;
+    public pos: PosInfo;
+    public type: string;
+    constructor(expr: Expr, field: string, pos: PosInfo){
+        this.expr = expr;
+        this.field = field;
+        this.pos = pos;
+        this.type = ((): string => {
+        return "idk";
+        })();
+    }
+}
+export class GetIndexExpr {
+    public kind: ASTKinds.GetIndexExpr = ASTKinds.GetIndexExpr;
+    public expr: Expr;
+    public index: Expr;
+    public pos: PosInfo;
+    public type: string;
+    constructor(expr: Expr, index: Expr, pos: PosInfo){
+        this.expr = expr;
+        this.index = index;
+        this.pos = pos;
+        this.type = ((): string => {
+        return "idk";
+        })();
+    }
+}
 export class RangeExpr {
     public kind: ASTKinds.RangeExpr = ASTKinds.RangeExpr;
     public min: Expr;
@@ -271,7 +313,7 @@ export class RangeExpr {
         this.max = max;
         this.pos = pos;
         this.type = ((): string => {
-        return 'Array<num>';
+        return 'Range<num>';
         })();
     }
 }
@@ -649,6 +691,8 @@ export class Parser {
                 () => this.matchExpr_6($$dpth + 1, $$cr),
                 () => this.matchExpr_7($$dpth + 1, $$cr),
                 () => this.matchExpr_8($$dpth + 1, $$cr),
+                () => this.matchExpr_9($$dpth + 1, $$cr),
+                () => this.matchExpr_10($$dpth + 1, $$cr),
             ]);
         };
         const $scope$pos = this.mark();
@@ -698,6 +742,12 @@ export class Parser {
         return this.matchStringExpr($$dpth + 1, $$cr);
     }
     public matchExpr_8($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_8> {
+        return this.matchGetFieldExpr($$dpth + 1, $$cr);
+    }
+    public matchExpr_9($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_9> {
+        return this.matchGetIndexExpr($$dpth + 1, $$cr);
+    }
+    public matchExpr_10($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_10> {
         return this.matchIdentExpr($$dpth + 1, $$cr);
     }
     public matchArrayExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<ArrayExpr> {
@@ -821,6 +871,50 @@ export class Parser {
                 return $$res;
             });
     }
+    public matchGetFieldExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<GetFieldExpr> {
+        return this.run<GetFieldExpr>($$dpth,
+            () => {
+                let $scope$expr: Nullable<Expr>;
+                let $scope$field: Nullable<string>;
+                let $scope$pos: Nullable<PosInfo>;
+                let $$res: Nullable<GetFieldExpr> = null;
+                if (true
+                    && ($scope$expr = this.matchExpr($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:\.)`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$field = this.regexAccept(String.raw`(?:[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+)`, "", $$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$pos = this.mark()) !== null
+                ) {
+                    $$res = new GetFieldExpr($scope$expr, $scope$field, $scope$pos);
+                }
+                return $$res;
+            });
+    }
+    public matchGetIndexExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<GetIndexExpr> {
+        return this.run<GetIndexExpr>($$dpth,
+            () => {
+                let $scope$expr: Nullable<Expr>;
+                let $scope$index: Nullable<Expr>;
+                let $scope$pos: Nullable<PosInfo>;
+                let $$res: Nullable<GetIndexExpr> = null;
+                if (true
+                    && ($scope$expr = this.matchExpr($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:\[)`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$index = this.matchExpr($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:\])`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$pos = this.mark()) !== null
+                ) {
+                    $$res = new GetIndexExpr($scope$expr, $scope$index, $scope$pos);
+                }
+                return $$res;
+            });
+    }
     public matchRangeExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<RangeExpr> {
         return this.run<RangeExpr>($$dpth,
             () => {
@@ -833,8 +927,8 @@ export class Parser {
                     && ($scope$min = this.matchExpr($$dpth + 1, $$cr)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:\.\.)`, "", $$dpth + 1, $$cr) !== null
-                    && this.match_($$dpth + 1, $$cr) !== null
                     && (($scope$inclusive = this.regexAccept(String.raw`(?:=)`, "", $$dpth + 1, $$cr)) || true)
+                    && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$max = this.matchExpr($$dpth + 1, $$cr)) !== null
                     && ($scope$pos = this.mark()) !== null
                 ) {
@@ -851,7 +945,7 @@ export class Parser {
                 let $$res: Nullable<NumExpr> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && ($scope$literal = this.regexAccept(String.raw`(?:[0-9]+(\.[0-9]+)?)`, "", $$dpth + 1, $$cr)) !== null
+                    && ($scope$literal = this.regexAccept(String.raw`(?:-?[0-9]+(\.[0-9]+)?)`, "", $$dpth + 1, $$cr)) !== null
                     && ($scope$pos = this.mark()) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                 ) {

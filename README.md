@@ -11,12 +11,13 @@ Building a language while learning at the same time. JScript transpiles to JavaS
     - ✓ | Basic expressions
     - ✓ | Let, fn, assign statements
     - ✓ | Arrays with destructuring
-    - ✗ | Syntax for ranges
+    - ✓ | Syntax for ranges
     - ✗ | Control flow
+    - ✗ | Loops
     - ✗ | Structs
     - ✗ | Enums
-    - ✗ | Impl statements
     - ✗ | Pattern matching
+    - ✗ | Impl statements
 2. ✗ | Parser rewrite
 3. ✗ | Good error messages
 4. ✗ | Decide on a macro system

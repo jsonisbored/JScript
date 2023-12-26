@@ -345,7 +345,24 @@ function type_check(ast: Program): Error[] {
                     }
                 }
             }
-            
+        } else if (e.kind === ASTKinds.RangeExpr) {
+            return e.type;
+        } else if (e.kind === ASTKinds.GetFieldExpr) {
+            if (e.expr.kind === ASTKinds.ArrayExpr) {
+                const type = e.expr.type.match(/<([A-z]+)>/);
+                if (type) {
+                    return type[1];
+                }
+            }
+            return "idk";
+        } else if (e.kind === ASTKinds.GetIndexExpr) {
+            if (e.expr.kind === ASTKinds.ArrayExpr) {
+                const type = e.expr.type.match(/<([A-z]+)>/);
+                if (type) {
+                    return type[1];
+                }
+            }
+            return "idk";
         }
         return "idk";
     }
@@ -450,10 +467,19 @@ function generate(ast: Program): string {
                     +']';
             } else {
                 const min = expr(e.min);
-                const max = expr(e.max) + (e.inclusive ? "1" : "");
+                const max = expr(e.max) + (e.inclusive ? "+1" : "");
                 
                 output += `Array(${max}-${min}).fill(0).map((_, i) => i+${min})`;
             }
+        } else if (e.kind === ASTKinds.GetFieldExpr) {
+            output += expr(e.expr)
+                +"."
+                +e.field;
+        } else if (e.kind === ASTKinds.GetIndexExpr) {
+            output += expr(e.expr)
+                +"["
+                +expr(e.index)
+                +"]";
         }
         return output;
     }
