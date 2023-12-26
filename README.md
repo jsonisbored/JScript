@@ -21,9 +21,8 @@ Building a language while learning at the same time. JScript transpiles to JavaS
 2. ✗ | Parser rewrite
 3. ✗ | Good error messages
 4. ✗ | Decide on a macro system
-5. ✗ | Decide on a macro system
-6. ✗ | Lowering and optimizations
-7. ✗ | Figure out CLI, standard library, & package manager details
+5. ✗ | Lowering and optimizations
+6. ✗ | Figure out CLI, standard library, & package manager details
 
 ## Example
 Code will look a lot like rust with a garbage collector.
