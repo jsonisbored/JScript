@@ -48,6 +48,7 @@ Expr := IfExpr
     | StringExpr
     | GetFieldExpr
     | GetIndexExpr
+    | BoolExpr
     | IdentExpr
 
 ArrayExpr := _'\['_ items=ArrayItem* _'\]'_ pos=@

@@ -480,6 +480,28 @@ function generate(ast: Program): string {
                 +"["
                 +expr(e.index)
                 +"]";
+        } else if (e.kind === ASTKinds.BoolExpr) {
+            output += e.value;
+        } else if (e.kind === ASTKinds.IfExpr) {
+            output += e.condition
+                +"?"
+                +e.stmts.map(stmt).join("\n")
+
+            output += expr(e.condition)
+                +" ? "
+            indent += "\t";
+            output += e.stmts.map(stmt).join("\n")
+            indent = indent.slice(0, -1);
+            output += " : ";
+            if (e.otherwise) {
+                output += " else {\n";
+                indent += "\t";
+                output += e.otherwise.if ? 
+                    expr(e.otherwise.if) :
+                    e.otherwise.stmts.map(stmt).join("")
+                indent = indent.slice(0, -1);
+                output += "\n}";
+            }
         }
         return output;
     }
