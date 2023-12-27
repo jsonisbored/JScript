@@ -4,12 +4,13 @@
 * Stmt := CommentStmt
 *     | ReturnStmt
 *     | IfStmt
+*     | ForStmt
 *     | LetStmt
 *     | AssignStmt
 *     | FnStmt
 *     | ExprStmt
-* LetStmt := _'let\s'_
-*     mut='mut\s'?_
+* LetStmt := _'let'x
+*     mut='mut'? x
 *     pattern=Pattern
 *     _{':\s*' &'[a-zA-Z_]'}? type='[a-zA-Z_][a-zA-Z0-9_]*'?
 *     _'='_
@@ -18,7 +19,7 @@
 * AssignStmt := _ pattern=Pattern _'='_ expr=Expr _';' pos=@ _
 * CommentStmt := _ literal='//.*' pos=@ _
 * ExprStmt := expr=Expr pos=@
-* FnStmt := _'fn\s'_
+* FnStmt := _'fn'x
 *     ident=Ident
 *     _'\('_ params=Param* _'\)'_
 *     _{':\s*' &'[a-zA-Z_]'}? return_type='[a-zA-Z_][a-zA-Z0-9_]*'?
@@ -27,8 +28,8 @@
 * Param := _ name='[a-zA-Z_][a-zA-Z0-9_]*'_
 *     _':'_ type='[a-zA-Z_][a-zA-Z0-9_]*' _
 *     {_','_ | &'\)'}
-* ReturnStmt := _'return\s'_ expr=Expr _';'_ pos=@
-* IfStmt := _'if\s'_
+* ReturnStmt := _'return'x expr=Expr _';'_ pos=@
+* IfStmt := _'if'x
 *     condition=Expr
 *     _'{'_ stmts=Stmt* _'}'_
 *     pos=@
@@ -37,6 +38,8 @@
 *     if=IfStmt?
 *     _'{'?_ stmts=Stmt* _'}'?_
 *     pos=@
+* ForStmt := _'for'x pattern=Pattern _'in'_ iter_expr=Expr _'{'_
+*     stmts=Stmt* _'}'_
 * Expr := IfExpr
 *     | ArrayExpr
 *     | SumExpr
@@ -68,7 +71,7 @@
 * GetIndexExpr := expr=Expr _'\['_ index=Expr _'\]'_ pos=@ 
 *     .type = string { return "idk"; }
 *     .value = unknown { return; }
-* IfExpr := _'if\s'_
+* IfExpr := _'if'x
 *     condition=Expr
 *     _'{'_ stmts=Stmt* _'}'_
 *     pos=@
@@ -102,6 +105,7 @@
 * Ident := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_
 *     .type = string { return 'idk'; }
 * _ := '\s*'
+* x := !'[a-zA-Z_]' _
 */
 type Nullable<T> = T | null;
 type $$RuleType<T> = () => Nullable<T>;
@@ -117,6 +121,7 @@ export enum ASTKinds {
     Stmt_5 = "Stmt_5",
     Stmt_6 = "Stmt_6",
     Stmt_7 = "Stmt_7",
+    Stmt_8 = "Stmt_8",
     LetStmt = "LetStmt",
     LetStmt_$0 = "LetStmt_$0",
     AssignStmt = "AssignStmt",
@@ -131,6 +136,7 @@ export enum ASTKinds {
     IfStmt = "IfStmt",
     ElseStmt = "ElseStmt",
     ElseStmt_$0 = "ElseStmt_$0",
+    ForStmt = "ForStmt",
     Expr_1 = "Expr_1",
     Expr_2 = "Expr_2",
     Expr_3 = "Expr_3",
@@ -168,20 +174,22 @@ export enum ASTKinds {
     ArrayPatItem_$0_2 = "ArrayPatItem_$0_2",
     Ident = "Ident",
     _ = "_",
+    x = "x",
     $EOF = "$EOF",
 }
 export interface Program {
     kind: ASTKinds.Program;
     stmts: Stmt[];
 }
-export type Stmt = Stmt_1 | Stmt_2 | Stmt_3 | Stmt_4 | Stmt_5 | Stmt_6 | Stmt_7;
+export type Stmt = Stmt_1 | Stmt_2 | Stmt_3 | Stmt_4 | Stmt_5 | Stmt_6 | Stmt_7 | Stmt_8;
 export type Stmt_1 = CommentStmt;
 export type Stmt_2 = ReturnStmt;
 export type Stmt_3 = IfStmt;
-export type Stmt_4 = LetStmt;
-export type Stmt_5 = AssignStmt;
-export type Stmt_6 = FnStmt;
-export type Stmt_7 = ExprStmt;
+export type Stmt_4 = ForStmt;
+export type Stmt_5 = LetStmt;
+export type Stmt_6 = AssignStmt;
+export type Stmt_7 = FnStmt;
+export type Stmt_8 = ExprStmt;
 export interface LetStmt {
     kind: ASTKinds.LetStmt;
     mut: Nullable<string>;
@@ -250,6 +258,12 @@ export interface ElseStmt {
 }
 export interface ElseStmt_$0 {
     kind: ASTKinds.ElseStmt_$0;
+}
+export interface ForStmt {
+    kind: ASTKinds.ForStmt;
+    pattern: Pattern;
+    iter_expr: Expr;
+    stmts: Stmt[];
 }
 export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5 | Expr_6 | Expr_7 | Expr_8 | Expr_9 | Expr_10 | Expr_11 | Expr_12;
 export type Expr_1 = IfExpr;
@@ -541,6 +555,9 @@ export class Ident {
     }
 }
 export type _ = string;
+export interface x {
+    kind: ASTKinds.x;
+}
 export class Parser {
     private readonly input: string;
     private pos: PosInfo;
@@ -583,6 +600,7 @@ export class Parser {
             () => this.matchStmt_5($$dpth + 1, $$cr),
             () => this.matchStmt_6($$dpth + 1, $$cr),
             () => this.matchStmt_7($$dpth + 1, $$cr),
+            () => this.matchStmt_8($$dpth + 1, $$cr),
         ]);
     }
     public matchStmt_1($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_1> {
@@ -595,15 +613,18 @@ export class Parser {
         return this.matchIfStmt($$dpth + 1, $$cr);
     }
     public matchStmt_4($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_4> {
-        return this.matchLetStmt($$dpth + 1, $$cr);
+        return this.matchForStmt($$dpth + 1, $$cr);
     }
     public matchStmt_5($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_5> {
-        return this.matchAssignStmt($$dpth + 1, $$cr);
+        return this.matchLetStmt($$dpth + 1, $$cr);
     }
     public matchStmt_6($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_6> {
-        return this.matchFnStmt($$dpth + 1, $$cr);
+        return this.matchAssignStmt($$dpth + 1, $$cr);
     }
     public matchStmt_7($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_7> {
+        return this.matchFnStmt($$dpth + 1, $$cr);
+    }
+    public matchStmt_8($$dpth: number, $$cr?: ErrorTracker): Nullable<Stmt_8> {
         return this.matchExprStmt($$dpth + 1, $$cr);
     }
     public matchLetStmt($$dpth: number, $$cr?: ErrorTracker): Nullable<LetStmt> {
@@ -617,10 +638,10 @@ export class Parser {
                 let $$res: Nullable<LetStmt> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && this.regexAccept(String.raw`(?:let\s)`, "", $$dpth + 1, $$cr) !== null
-                    && this.match_($$dpth + 1, $$cr) !== null
-                    && (($scope$mut = this.regexAccept(String.raw`(?:mut\s)`, "", $$dpth + 1, $$cr)) || true)
-                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:let)`, "", $$dpth + 1, $$cr) !== null
+                    && this.matchx($$dpth + 1, $$cr) !== null
+                    && (($scope$mut = this.regexAccept(String.raw`(?:mut)`, "", $$dpth + 1, $$cr)) || true)
+                    && this.matchx($$dpth + 1, $$cr) !== null
                     && ($scope$pattern = this.matchPattern($$dpth + 1, $$cr)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && ((this.matchLetStmt_$0($$dpth + 1, $$cr)) || true)
@@ -719,8 +740,8 @@ export class Parser {
                 let $$res: Nullable<FnStmt> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && this.regexAccept(String.raw`(?:fn\s)`, "", $$dpth + 1, $$cr) !== null
-                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:fn)`, "", $$dpth + 1, $$cr) !== null
+                    && this.matchx($$dpth + 1, $$cr) !== null
                     && ($scope$ident = this.matchIdent($$dpth + 1, $$cr)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:\()`, "", $$dpth + 1, $$cr) !== null
@@ -813,8 +834,8 @@ export class Parser {
                 let $$res: Nullable<ReturnStmt> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && this.regexAccept(String.raw`(?:return\s)`, "", $$dpth + 1, $$cr) !== null
-                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:return)`, "", $$dpth + 1, $$cr) !== null
+                    && this.matchx($$dpth + 1, $$cr) !== null
                     && ($scope$expr = this.matchExpr($$dpth + 1, $$cr)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:;)`, "", $$dpth + 1, $$cr) !== null
@@ -836,8 +857,8 @@ export class Parser {
                 let $$res: Nullable<IfStmt> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && this.regexAccept(String.raw`(?:if\s)`, "", $$dpth + 1, $$cr) !== null
-                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:if)`, "", $$dpth + 1, $$cr) !== null
+                    && this.matchx($$dpth + 1, $$cr) !== null
                     && ($scope$condition = this.matchExpr($$dpth + 1, $$cr)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:{)`, "", $$dpth + 1, $$cr) !== null
@@ -890,6 +911,35 @@ export class Parser {
                     && this.match_($$dpth + 1, $$cr) !== null
                 ) {
                     $$res = {kind: ASTKinds.ElseStmt_$0, };
+                }
+                return $$res;
+            });
+    }
+    public matchForStmt($$dpth: number, $$cr?: ErrorTracker): Nullable<ForStmt> {
+        return this.run<ForStmt>($$dpth,
+            () => {
+                let $scope$pattern: Nullable<Pattern>;
+                let $scope$iter_expr: Nullable<Expr>;
+                let $scope$stmts: Nullable<Stmt[]>;
+                let $$res: Nullable<ForStmt> = null;
+                if (true
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:for)`, "", $$dpth + 1, $$cr) !== null
+                    && this.matchx($$dpth + 1, $$cr) !== null
+                    && ($scope$pattern = this.matchPattern($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:in)`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$iter_expr = this.matchExpr($$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:{)`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && ($scope$stmts = this.loop<Stmt>(() => this.matchStmt($$dpth + 1, $$cr), 0, -1)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:})`, "", $$dpth + 1, $$cr) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                ) {
+                    $$res = {kind: ASTKinds.ForStmt, pattern: $scope$pattern, iter_expr: $scope$iter_expr, stmts: $scope$stmts};
                 }
                 return $$res;
             });
@@ -1147,8 +1197,8 @@ export class Parser {
                 let $$res: Nullable<IfExpr> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && this.regexAccept(String.raw`(?:if\s)`, "", $$dpth + 1, $$cr) !== null
-                    && this.match_($$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:if)`, "", $$dpth + 1, $$cr) !== null
+                    && this.matchx($$dpth + 1, $$cr) !== null
                     && ($scope$condition = this.matchExpr($$dpth + 1, $$cr)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && this.regexAccept(String.raw`(?:{)`, "", $$dpth + 1, $$cr) !== null
@@ -1380,6 +1430,19 @@ export class Parser {
     }
     public match_($$dpth: number, $$cr?: ErrorTracker): Nullable<_> {
         return this.regexAccept(String.raw`(?:\s*)`, "", $$dpth + 1, $$cr);
+    }
+    public matchx($$dpth: number, $$cr?: ErrorTracker): Nullable<x> {
+        return this.run<x>($$dpth,
+            () => {
+                let $$res: Nullable<x> = null;
+                if (true
+                    && this.negate(() => this.regexAccept(String.raw`(?:[a-zA-Z_])`, "", $$dpth + 1, $$cr)) !== null
+                    && this.match_($$dpth + 1, $$cr) !== null
+                ) {
+                    $$res = {kind: ASTKinds.x, };
+                }
+                return $$res;
+            });
     }
     public test(): boolean {
         const mrk = this.mark();

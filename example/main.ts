@@ -488,6 +488,14 @@ function generate(ast: Program): string {
                     s.otherwise.stmts.map(a => stmt(a, indent+"\t")).join("\n")
                 output += "\n}";
             }
+        } else if (s.kind === ASTKinds.ForStmt) {
+            output += "for (const "
+                +pattern(s.pattern)
+                +" of "
+                +expr(s.iter_expr)
+                +") {\n"
+                +s.stmts.map(a => stmt(a, indent+"\t"))
+                +"\n}";
         }
         return output;
     }

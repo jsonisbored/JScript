@@ -3,13 +3,14 @@ Program := stmts=Stmt* $
 Stmt := CommentStmt
     | ReturnStmt
     | IfStmt
+    | ForStmt
     | LetStmt
     | AssignStmt
     | FnStmt
     | ExprStmt
 
-LetStmt := _'let\s'_
-    mut='mut\s'?_
+LetStmt := _'let'x
+    mut='mut'? x
     pattern=Pattern
     _{':\s*' &'[a-zA-Z_]'}? type='[a-zA-Z_][a-zA-Z0-9_]*'?
     _'='_
@@ -18,7 +19,7 @@ LetStmt := _'let\s'_
 AssignStmt := _ pattern=Pattern _'='_ expr=Expr _';' pos=@ _
 CommentStmt := _ literal='//.*' pos=@ _
 ExprStmt := expr=Expr pos=@
-FnStmt := _'fn\s'_
+FnStmt := _'fn'x
     ident=Ident
     _'\('_ params=Param* _'\)'_
     _{':\s*' &'[a-zA-Z_]'}? return_type='[a-zA-Z_][a-zA-Z0-9_]*'?
@@ -27,8 +28,8 @@ FnStmt := _'fn\s'_
 Param := _ name='[a-zA-Z_][a-zA-Z0-9_]*'_
     _':'_ type='[a-zA-Z_][a-zA-Z0-9_]*' _
     {_','_ | &'\)'}
-ReturnStmt := _'return\s'_ expr=Expr _';'_ pos=@
-IfStmt := _'if\s'_
+ReturnStmt := _'return'x expr=Expr _';'_ pos=@
+IfStmt := _'if'x
     condition=Expr
     _'{'_ stmts=Stmt* _'}'_
     pos=@
@@ -37,6 +38,8 @@ ElseStmt := {_'else'_ &'if|{'_}
     if=IfStmt?
     _'{'?_ stmts=Stmt* _'}'?_
     pos=@
+ForStmt := _'for'x pattern=Pattern _'in'_ iter_expr=Expr _'{'_
+    stmts=Stmt* _'}'_
 
 Expr := IfExpr
     | ArrayExpr
@@ -70,7 +73,7 @@ GetFieldExpr := expr=Expr _'\.'_ field='[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+'_ pos=@
 GetIndexExpr := expr=Expr _'\['_ index=Expr _'\]'_ pos=@ 
     .type = string { return "idk"; }
     .value = unknown { return; }
-IfExpr := _'if\s'_
+IfExpr := _'if'x
     condition=Expr
     _'{'_ stmts=Stmt* _'}'_
     pos=@
@@ -107,3 +110,4 @@ Ident := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_
     .type = string { return 'idk'; }
 
 _ := '\s*'
+x := !'[a-zA-Z_]' _

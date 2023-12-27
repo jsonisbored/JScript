@@ -1,3 +1,3 @@
-if true {
-    return if a { 1 } else { 0 };
+for n in 0..9 {
+    // console.log(n)
 }
