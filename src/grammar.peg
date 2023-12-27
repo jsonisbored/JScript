@@ -1,14 +1,15 @@
 Program := stmts=Stmt* $
 
 Stmt := CommentStmt
+    | ReturnStmt
+    | IfStmt
     | LetStmt
     | AssignStmt
     | FnStmt
-    | ReturnStmt
     | ExprStmt
 
-LetStmt := _'let '_
-    mut='mut '?_
+LetStmt := _'let\s'_
+    mut='mut\s'?_
     pattern=Pattern
     _{':\s*' &'[a-zA-Z_]'}? type='[a-zA-Z_][a-zA-Z0-9_]*'?
     _'='_
@@ -17,7 +18,7 @@ LetStmt := _'let '_
 AssignStmt := _ pattern=Pattern _'='_ expr=Expr _';' pos=@ _
 CommentStmt := _ literal='//.*' pos=@ _
 ExprStmt := expr=Expr pos=@
-FnStmt := _'fn '_
+FnStmt := _'fn\s'_
     ident=Ident
     _'\('_ params=Param* _'\)'_
     _{':\s*' &'[a-zA-Z_]'}? return_type='[a-zA-Z_][a-zA-Z0-9_]*'?
@@ -26,9 +27,19 @@ FnStmt := _'fn '_
 Param := _ name='[a-zA-Z_][a-zA-Z0-9_]*'_
     _':'_ type='[a-zA-Z_][a-zA-Z0-9_]*' _
     {_','_ | &'\)'}
-ReturnStmt := _'return '_ expr=Expr _';'_ pos=@
+ReturnStmt := _'\sreturn\s'_ expr=Expr _';'_ pos=@
+IfStmt := _'if\s'_
+    condition=Expr
+    _'{'_ stmts=Stmt* _'}'_
+    pos=@
+    else=ElseStmt?
+ElseStmt := {_'else'_ &'if|{'_}
+    if=IfStmt?
+    _'{'?_ stmts=Stmt* _'}'?_
+    pos=@
 
-Expr := ArrayExpr
+Expr := IfExpr
+    | ArrayExpr
     | SumExpr
     | ProdExpr
     | GroupExpr
@@ -52,6 +63,16 @@ GetFieldExpr := expr=Expr _'\.'_ field='[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+'_ pos=@
     .type = string { return "idk"; }
 GetIndexExpr := expr=Expr _'\['_ index=Expr _'\]'_ pos=@ 
     .type = string { return "idk"; }
+IfExpr := _'if\s'_
+    condition=Expr
+    _'{'_ stmts=Stmt* _'}'_
+    pos=@
+    else=ElseExpr?
+    .type = string { return "idk"; }
+ElseExpr := {_'else'_ &'if|{'_}
+    if=IfExpr?
+    _'{'?_ stmts=Stmt* _'}'?_
+    pos=@
 
 RangeExpr := min=Expr _'\.\.' inclusive='='? _ max=Expr pos=@
     .type = string { return 'Range<num>'; }

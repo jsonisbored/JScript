@@ -1,3 +1,3 @@
-let asdf = 1..=9;
-let [one] = asdf;
-let aocw = one..=asdf[1];
+if true {
+    return if a { 1 } else { 0 }
+}

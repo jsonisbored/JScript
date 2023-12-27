@@ -495,6 +495,7 @@ async function main() {
     const input = await Deno.readTextFile("./example/test.j");
 
     const { ast, errs } = parse(input);
+    console.log(ast);
     if (errs.length || !ast) {
         for (const e of errs) {
             console.error(e);
@@ -515,6 +516,6 @@ async function main() {
 
     const output = generate(ast);
 
-    Deno.writeTextFile("./example/output.js", output);
+    Deno.writeTextFile("./example/test.js", output);
 }
 main();
