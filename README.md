@@ -12,7 +12,7 @@ Building a language while learning at the same time. JScript transpiles to JavaS
     - ✓ | Let, fn, assign statements
     - ✓ | Arrays with destructuring
     - ✓ | Syntax for ranges
-    - ✗ | Control flow
+    - ✓ | If statements & expressions
     - ✗ | Loops
     - ✗ | Structs
     - ✗ | Enums
