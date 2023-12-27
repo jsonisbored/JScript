@@ -1,3 +1,3 @@
 if (true) {
-	return ;
+	return a ? (1) : (0);
 }

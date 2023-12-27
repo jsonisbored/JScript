@@ -432,7 +432,6 @@ function type_check(ast: Program): Error[] {
 
 function generate(ast: Program): string {
     let output = "";
-    let indent = "";
     
     function pattern(p: Pattern): string {
         if (p.kind === ASTKinds.Ident) {
@@ -445,7 +444,7 @@ function generate(ast: Program): string {
         return "";
     }
 
-    function stmt(s: Stmt): string {
+    function stmt(s: Stmt, indent = ""): string {
         let output = indent;
         if (s.kind === ASTKinds.CommentStmt) {
             output += s.literal;
@@ -472,25 +471,21 @@ function generate(ast: Program): string {
                 +"("
                 +s.params.map(p => p.name).join(", ")
                 +") {\n"
-            indent += "\t";
-            output += s.stmts.map(stmt).join("\n")
-            indent = indent.slice(0, -1);
+            // indent += "\t";
+            output += s.stmts.map(a => stmt(a, indent+"\t")).join("\n")
+            // indent = indent.slice(0, -1);
             output += "\n}";
         } else if (s.kind === ASTKinds.IfStmt) {
             output += "if ("
                 +expr(s.condition)
                 +") {\n"
-            indent += "\t";
-            output += s.stmts.map(stmt).join("\n")
-            indent = indent.slice(0, -1);
+            output += s.stmts.map(a => stmt(a, indent+"\t")).join("\n")
             output += "\n}";
             if (s.otherwise) {
                 output += " else {\n";
-                indent += "\t";
                 output += s.otherwise.if ? 
                     stmt(s.otherwise.if) :
-                    s.otherwise.stmts.map(stmt).join("")
-                indent = indent.slice(0, -1);
+                    s.otherwise.stmts.map(a => stmt(a, indent+"\t")).join("\n")
                 output += "\n}";
             }
         }
@@ -556,24 +551,18 @@ function generate(ast: Program): string {
         } else if (e.kind === ASTKinds.BoolExpr) {
             output += e.value;
         } else if (e.kind === ASTKinds.IfExpr) {
-            output += e.condition
-                +"?"
-                +e.stmts.map(stmt).join("\n")
-
             output += expr(e.condition)
-                +" ? "
-            indent += "\t";
-            output += e.stmts.map(stmt).join("\n")
-            indent = indent.slice(0, -1);
-            output += " : ";
+                +" ? (";
+            output += e.stmts.map(a => stmt(a, "")).join(", ")
+            output += ")";
             if (e.otherwise) {
-                output += " else {\n";
-                indent += "\t";
+                output += " : (";
                 output += e.otherwise.if ? 
                     expr(e.otherwise.if) :
-                    e.otherwise.stmts.map(stmt).join("")
-                indent = indent.slice(0, -1);
-                output += "\n}";
+                    e.otherwise.stmts.map(a => stmt(a, "")).join(", ");
+                output += ")";
+            } else {
+                output += ": undefined";
             }
         }
         return output;
