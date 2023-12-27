@@ -37,7 +37,7 @@ fn fib(n: num): num {
 ```
 
 ## Main Inspirations
-https://play.rust-lang.org/
-https://rescript-lang.org/try
-https://www.typescriptlang.org/play
-https://github.com/tuqqu/oxide-lang
+- https://play.rust-lang.org/
+- https://rescript-lang.org/try
+- https://www.typescriptlang.org/play
+- https://github.com/tuqqu/oxide-lang
