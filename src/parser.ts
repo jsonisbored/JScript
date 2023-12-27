@@ -27,12 +27,12 @@
 * Param := _ name='[a-zA-Z_][a-zA-Z0-9_]*'_
 *     _':'_ type='[a-zA-Z_][a-zA-Z0-9_]*' _
 *     {_','_ | &'\)'}
-* ReturnStmt := _'\sreturn\s'_ expr=Expr _';'_ pos=@
+* ReturnStmt := _'return\s'_ expr=Expr _';'_ pos=@
 * IfStmt := _'if\s'_
 *     condition=Expr
 *     _'{'_ stmts=Stmt* _'}'_
 *     pos=@
-*     else=ElseStmt?
+*     otherwise=ElseStmt?
 * ElseStmt := {_'else'_ &'if|{'_}
 *     if=IfStmt?
 *     _'{'?_ stmts=Stmt* _'}'?_
@@ -47,39 +47,52 @@
 *     | StringExpr
 *     | GetFieldExpr
 *     | GetIndexExpr
+*     | BoolExpr
 *     | IdentExpr
 * ArrayExpr := _'\['_ items=ArrayItem* _'\]'_ pos=@
 *     .type = string { return items.length ? `Array<${items[0].expr.type}>` : "idk"; }
+*     .value = unknown { return; }
 * ArrayItem := expr=Expr {_','_ | &'\]'}
 * SumExpr := left=Expr _ op='\+|-'_ right=Expr pos=@
 *     .type = string { return this.left.type; }
+*     .value = unknown { return; }
 * ProdExpr := left=Expr _ op='\*|/'_ right=Expr pos=@
 *     .type = string { return this.left.type; }
+*     .value = unknown { return; }
 * GroupExpr := _'\('_ expr=Expr _'\)'_ pos=@
 *     .type = string { return this.expr.type; }
+*     .value = unknown { return this.expr.value; }
 * GetFieldExpr := expr=Expr _'\.'_ field='[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+'_ pos=@
 *     .type = string { return "idk"; }
+*     .value = unknown { return; }
 * GetIndexExpr := expr=Expr _'\['_ index=Expr _'\]'_ pos=@ 
 *     .type = string { return "idk"; }
+*     .value = unknown { return; }
 * IfExpr := _'if\s'_
 *     condition=Expr
 *     _'{'_ stmts=Stmt* _'}'_
 *     pos=@
-*     else=ElseExpr?
+*     otherwise=ElseExpr?
 *     .type = string { return "idk"; }
+*     .value = unknown { return; }
 * ElseExpr := {_'else'_ &'if|{'_}
 *     if=IfExpr?
 *     _'{'?_ stmts=Stmt* _'}'?_
 *     pos=@
 * RangeExpr := min=Expr _'\.\.' inclusive='='? _ max=Expr pos=@
-*     .type = string { return 'Range<num>'; }
+*     .type = string { return 'Range'; }
+*     .value = unknown { return; }
 * NumExpr := _ literal='-?[0-9]+(\.[0-9]+)?' pos=@ _
 *     .value = number { return Number(this.literal); }
 *     .type = string { return 'num'; }
 * StringExpr := _ literal='".*"'_ pos=@
 *     .value = string { return this.literal.slice(1, -1); }
 *     .type = string { return 'str'; }
+* BoolExpr := literal='true|false' pos=@
+*     .value = string { return this.literal === 'true'; }
+*     .type = string { return 'bool' }
 * IdentExpr := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_ pos=@
+*     .value = unknown { return; }
 *     .type = string { return 'idk'; }
 * Pattern := Ident
 *     | ArrayPat
@@ -129,6 +142,7 @@ export enum ASTKinds {
     Expr_9 = "Expr_9",
     Expr_10 = "Expr_10",
     Expr_11 = "Expr_11",
+    Expr_12 = "Expr_12",
     ArrayExpr = "ArrayExpr",
     ArrayItem = "ArrayItem",
     ArrayItem_$0_1 = "ArrayItem_$0_1",
@@ -144,6 +158,7 @@ export enum ASTKinds {
     RangeExpr = "RangeExpr",
     NumExpr = "NumExpr",
     StringExpr = "StringExpr",
+    BoolExpr = "BoolExpr",
     IdentExpr = "IdentExpr",
     Pattern_1 = "Pattern_1",
     Pattern_2 = "Pattern_2",
@@ -225,7 +240,7 @@ export interface IfStmt {
     condition: Expr;
     stmts: Stmt[];
     pos: PosInfo;
-    else: Nullable<ElseStmt>;
+    otherwise: Nullable<ElseStmt>;
 }
 export interface ElseStmt {
     kind: ASTKinds.ElseStmt;
@@ -236,7 +251,7 @@ export interface ElseStmt {
 export interface ElseStmt_$0 {
     kind: ASTKinds.ElseStmt_$0;
 }
-export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5 | Expr_6 | Expr_7 | Expr_8 | Expr_9 | Expr_10 | Expr_11;
+export type Expr = Expr_1 | Expr_2 | Expr_3 | Expr_4 | Expr_5 | Expr_6 | Expr_7 | Expr_8 | Expr_9 | Expr_10 | Expr_11 | Expr_12;
 export type Expr_1 = IfExpr;
 export type Expr_2 = ArrayExpr;
 export type Expr_3 = SumExpr;
@@ -247,17 +262,22 @@ export type Expr_7 = NumExpr;
 export type Expr_8 = StringExpr;
 export type Expr_9 = GetFieldExpr;
 export type Expr_10 = GetIndexExpr;
-export type Expr_11 = IdentExpr;
+export type Expr_11 = BoolExpr;
+export type Expr_12 = IdentExpr;
 export class ArrayExpr {
     public kind: ASTKinds.ArrayExpr = ASTKinds.ArrayExpr;
     public items: ArrayItem[];
     public pos: PosInfo;
     public type: string;
+    public value: unknown;
     constructor(items: ArrayItem[], pos: PosInfo){
         this.items = items;
         this.pos = pos;
         this.type = ((): string => {
         return items.length ? `Array<${items[0].expr.type}>` : "idk";
+        })();
+        this.value = ((): unknown => {
+        return;
         })();
     }
 }
@@ -277,6 +297,7 @@ export class SumExpr {
     public right: Expr;
     public pos: PosInfo;
     public type: string;
+    public value: unknown;
     constructor(left: Expr, op: string, right: Expr, pos: PosInfo){
         this.left = left;
         this.op = op;
@@ -284,6 +305,9 @@ export class SumExpr {
         this.pos = pos;
         this.type = ((): string => {
         return this.left.type;
+        })();
+        this.value = ((): unknown => {
+        return;
         })();
     }
 }
@@ -294,6 +318,7 @@ export class ProdExpr {
     public right: Expr;
     public pos: PosInfo;
     public type: string;
+    public value: unknown;
     constructor(left: Expr, op: string, right: Expr, pos: PosInfo){
         this.left = left;
         this.op = op;
@@ -302,6 +327,9 @@ export class ProdExpr {
         this.type = ((): string => {
         return this.left.type;
         })();
+        this.value = ((): unknown => {
+        return;
+        })();
     }
 }
 export class GroupExpr {
@@ -309,11 +337,15 @@ export class GroupExpr {
     public expr: Expr;
     public pos: PosInfo;
     public type: string;
+    public value: unknown;
     constructor(expr: Expr, pos: PosInfo){
         this.expr = expr;
         this.pos = pos;
         this.type = ((): string => {
         return this.expr.type;
+        })();
+        this.value = ((): unknown => {
+        return this.expr.value;
         })();
     }
 }
@@ -323,12 +355,16 @@ export class GetFieldExpr {
     public field: string;
     public pos: PosInfo;
     public type: string;
+    public value: unknown;
     constructor(expr: Expr, field: string, pos: PosInfo){
         this.expr = expr;
         this.field = field;
         this.pos = pos;
         this.type = ((): string => {
         return "idk";
+        })();
+        this.value = ((): unknown => {
+        return;
         })();
     }
 }
@@ -338,12 +374,16 @@ export class GetIndexExpr {
     public index: Expr;
     public pos: PosInfo;
     public type: string;
+    public value: unknown;
     constructor(expr: Expr, index: Expr, pos: PosInfo){
         this.expr = expr;
         this.index = index;
         this.pos = pos;
         this.type = ((): string => {
         return "idk";
+        })();
+        this.value = ((): unknown => {
+        return;
         })();
     }
 }
@@ -352,15 +392,19 @@ export class IfExpr {
     public condition: Expr;
     public stmts: Stmt[];
     public pos: PosInfo;
-    public else: Nullable<ElseExpr>;
+    public otherwise: Nullable<ElseExpr>;
     public type: string;
-    constructor(condition: Expr, stmts: Stmt[], pos: PosInfo, else: Nullable<ElseExpr>){
+    public value: unknown;
+    constructor(condition: Expr, stmts: Stmt[], pos: PosInfo, otherwise: Nullable<ElseExpr>){
         this.condition = condition;
         this.stmts = stmts;
         this.pos = pos;
-        this.else = else;
+        this.otherwise = otherwise;
         this.type = ((): string => {
         return "idk";
+        })();
+        this.value = ((): unknown => {
+        return;
         })();
     }
 }
@@ -380,13 +424,17 @@ export class RangeExpr {
     public max: Expr;
     public pos: PosInfo;
     public type: string;
+    public value: unknown;
     constructor(min: Expr, inclusive: Nullable<string>, max: Expr, pos: PosInfo){
         this.min = min;
         this.inclusive = inclusive;
         this.max = max;
         this.pos = pos;
         this.type = ((): string => {
-        return 'Range<num>';
+        return 'Range';
+        })();
+        this.value = ((): unknown => {
+        return;
         })();
     }
 }
@@ -424,14 +472,35 @@ export class StringExpr {
         })();
     }
 }
-export class IdentExpr {
-    public kind: ASTKinds.IdentExpr = ASTKinds.IdentExpr;
+export class BoolExpr {
+    public kind: ASTKinds.BoolExpr = ASTKinds.BoolExpr;
     public literal: string;
     public pos: PosInfo;
+    public value: string;
     public type: string;
     constructor(literal: string, pos: PosInfo){
         this.literal = literal;
         this.pos = pos;
+        this.value = ((): string => {
+        return this.literal === 'true';
+        })();
+        this.type = ((): string => {
+        return 'bool'
+        })();
+    }
+}
+export class IdentExpr {
+    public kind: ASTKinds.IdentExpr = ASTKinds.IdentExpr;
+    public literal: string;
+    public pos: PosInfo;
+    public value: unknown;
+    public type: string;
+    constructor(literal: string, pos: PosInfo){
+        this.literal = literal;
+        this.pos = pos;
+        this.value = ((): unknown => {
+        return;
+        })();
         this.type = ((): string => {
         return 'idk';
         })();
@@ -744,7 +813,7 @@ export class Parser {
                 let $$res: Nullable<ReturnStmt> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
-                    && this.regexAccept(String.raw`(?:\sreturn\s)`, "", $$dpth + 1, $$cr) !== null
+                    && this.regexAccept(String.raw`(?:return\s)`, "", $$dpth + 1, $$cr) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$expr = this.matchExpr($$dpth + 1, $$cr)) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
@@ -763,7 +832,7 @@ export class Parser {
                 let $scope$condition: Nullable<Expr>;
                 let $scope$stmts: Nullable<Stmt[]>;
                 let $scope$pos: Nullable<PosInfo>;
-                let $scope$else: Nullable<Nullable<ElseStmt>>;
+                let $scope$otherwise: Nullable<Nullable<ElseStmt>>;
                 let $$res: Nullable<IfStmt> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
@@ -778,9 +847,9 @@ export class Parser {
                     && this.regexAccept(String.raw`(?:})`, "", $$dpth + 1, $$cr) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$pos = this.mark()) !== null
-                    && (($scope$else = this.matchElseStmt($$dpth + 1, $$cr)) || true)
+                    && (($scope$otherwise = this.matchElseStmt($$dpth + 1, $$cr)) || true)
                 ) {
-                    $$res = {kind: ASTKinds.IfStmt, condition: $scope$condition, stmts: $scope$stmts, pos: $scope$pos, else: $scope$else};
+                    $$res = {kind: ASTKinds.IfStmt, condition: $scope$condition, stmts: $scope$stmts, pos: $scope$pos, otherwise: $scope$otherwise};
                 }
                 return $$res;
             });
@@ -839,6 +908,7 @@ export class Parser {
                 () => this.matchExpr_9($$dpth + 1, $$cr),
                 () => this.matchExpr_10($$dpth + 1, $$cr),
                 () => this.matchExpr_11($$dpth + 1, $$cr),
+                () => this.matchExpr_12($$dpth + 1, $$cr),
             ]);
         };
         const $scope$pos = this.mark();
@@ -897,6 +967,9 @@ export class Parser {
         return this.matchGetIndexExpr($$dpth + 1, $$cr);
     }
     public matchExpr_11($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_11> {
+        return this.matchBoolExpr($$dpth + 1, $$cr);
+    }
+    public matchExpr_12($$dpth: number, $$cr?: ErrorTracker): Nullable<Expr_12> {
         return this.matchIdentExpr($$dpth + 1, $$cr);
     }
     public matchArrayExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<ArrayExpr> {
@@ -1070,7 +1143,7 @@ export class Parser {
                 let $scope$condition: Nullable<Expr>;
                 let $scope$stmts: Nullable<Stmt[]>;
                 let $scope$pos: Nullable<PosInfo>;
-                let $scope$else: Nullable<Nullable<ElseExpr>>;
+                let $scope$otherwise: Nullable<Nullable<ElseExpr>>;
                 let $$res: Nullable<IfExpr> = null;
                 if (true
                     && this.match_($$dpth + 1, $$cr) !== null
@@ -1085,9 +1158,9 @@ export class Parser {
                     && this.regexAccept(String.raw`(?:})`, "", $$dpth + 1, $$cr) !== null
                     && this.match_($$dpth + 1, $$cr) !== null
                     && ($scope$pos = this.mark()) !== null
-                    && (($scope$else = this.matchElseExpr($$dpth + 1, $$cr)) || true)
+                    && (($scope$otherwise = this.matchElseExpr($$dpth + 1, $$cr)) || true)
                 ) {
-                    $$res = new IfExpr($scope$condition, $scope$stmts, $scope$pos, $scope$else);
+                    $$res = new IfExpr($scope$condition, $scope$stmts, $scope$pos, $scope$otherwise);
                 }
                 return $$res;
             });
@@ -1184,6 +1257,21 @@ export class Parser {
                     && ($scope$pos = this.mark()) !== null
                 ) {
                     $$res = new StringExpr($scope$literal, $scope$pos);
+                }
+                return $$res;
+            });
+    }
+    public matchBoolExpr($$dpth: number, $$cr?: ErrorTracker): Nullable<BoolExpr> {
+        return this.run<BoolExpr>($$dpth,
+            () => {
+                let $scope$literal: Nullable<string>;
+                let $scope$pos: Nullable<PosInfo>;
+                let $$res: Nullable<BoolExpr> = null;
+                if (true
+                    && ($scope$literal = this.regexAccept(String.raw`(?:true|false)`, "", $$dpth + 1, $$cr)) !== null
+                    && ($scope$pos = this.mark()) !== null
+                ) {
+                    $$res = new BoolExpr($scope$literal, $scope$pos);
                 }
                 return $$res;
             });

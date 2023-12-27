@@ -158,6 +158,9 @@ function transform(ast: Program): Error[] {
         } else if (s.kind === ASTKinds.FnStmt) {
             s.stmts = s.stmts.map(stmt);
             return s;
+        } else if (s.kind === ASTKinds.IfStmt) {
+            s.condition = expr(s.condition);
+            s.stmts = s.stmts.map(stmt);
         }
         return s;
     }
@@ -187,6 +190,13 @@ function transform(ast: Program): Error[] {
         } else if (e.kind === ASTKinds.RangeExpr) {
             e.min = expr(e.min);
             e.max = expr(e.max);
+        } else if (e.kind === ASTKinds.GetFieldExpr) {
+            e.expr = expr(e.expr);
+        } else if (e.kind === ASTKinds.GetIndexExpr) {
+            e.expr = expr(e.expr);
+            e.index = expr(e.index);
+        } else if (e.kind === ASTKinds.IfExpr) {
+            e.condition = expr(e.condition);
         }
         return e;
     }
@@ -277,6 +287,8 @@ function type_check(ast: Program): Error[] {
             expr(s.expr);
         } else if (s.kind === ASTKinds.ExprStmt) {
             expr(s.expr);
+        } else if (s.kind === ASTKinds.IfStmt) {
+            s.stmts.forEach(stmt);
         }
     }
     function expr(e: Expr): string {
@@ -320,7 +332,7 @@ function type_check(ast: Program): Error[] {
             }
             return e.type;
         } else if (e.kind === ASTKinds.IdentExpr) {
-            const type = scope.var_types[e.literal].type ?? "idk";
+            const type = scope.var_types[e.literal]?.type ?? "idk";
             e.type = type;
             return type;
         } else if (e.kind === ASTKinds.ArrayExpr) {
@@ -363,6 +375,50 @@ function type_check(ast: Program): Error[] {
                 }
             }
             return "idk";
+        } else if (e.kind === ASTKinds.BoolExpr) {
+            return "bool";
+        } else if (e.kind === ASTKinds.IfExpr) {
+            if (e.condition.type !== "bool") {
+                errors.push({
+                    kind: ErrorKind.Type,
+                    line: e.pos.line,
+                    offset: e.pos.offset,
+                    message: `Expected 'bool', found '${e.condition.type}'`,
+                });
+            }
+
+            e.stmts.map(stmt);
+
+            const last = e.stmts.at(-1);
+            const type = last?.kind === ASTKinds.ExprStmt ?
+                last.expr.type : "none";
+            
+            if (e.otherwise?.if) {
+                const chain_type = expr(e.otherwise.if);
+                if (type !== chain_type) {
+                    errors.push({
+                        kind: ErrorKind.Type,
+                        line: e.pos.line,
+                        offset: e.pos.offset,
+                        message: `Expected '${type}', found '${chain_type}'`,
+                    });
+                }
+            }
+
+            const last_last = e.otherwise?.stmts.at(-1);
+            const last_type = last_last?.kind === ASTKinds.ExprStmt ?
+                last_last.expr.type : "none";
+            if (type !== last_type) {
+                errors.push({
+                    kind: ErrorKind.Type,
+                    line: e.pos.line,
+                    offset: e.pos.offset,
+                    message: `Expected '${type}', found '${last_type}'`,
+                });
+            }
+            
+            e.type = type;
+            return e.type;
         }
         return "idk";
     }
@@ -420,6 +476,23 @@ function generate(ast: Program): string {
             output += s.stmts.map(stmt).join("\n")
             indent = indent.slice(0, -1);
             output += "\n}";
+        } else if (s.kind === ASTKinds.IfStmt) {
+            output += "if ("
+                +expr(s.condition)
+                +") {\n"
+            indent += "\t";
+            output += s.stmts.map(stmt).join("\n")
+            indent = indent.slice(0, -1);
+            output += "\n}";
+            if (s.otherwise) {
+                output += " else {\n";
+                indent += "\t";
+                output += s.otherwise.if ? 
+                    stmt(s.otherwise.if) :
+                    s.otherwise.stmts.map(stmt).join("")
+                indent = indent.slice(0, -1);
+                output += "\n}";
+            }
         }
         return output;
     }
@@ -529,8 +602,8 @@ async function main() {
     const errors: Error[] = [];
 
     errors.concat(semantic_checker(ast));
-    // errors.concat(transform(ast));
     errors.concat(type_check(ast));
+    errors.concat(transform(ast));
     
     for (const e of errors) {
         error(input, e.line, e.offset, "Type Error: "+e.message);

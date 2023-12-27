@@ -1,1 +1,3 @@
-
+if (true) {
+	return ;
+}
