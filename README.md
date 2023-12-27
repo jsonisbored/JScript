@@ -1,12 +1,41 @@
 # JScript
-Name is temporary
+Building a language while learning at the same time. JScript transpiles to JavaScript.
 
-The goal of this language is to address a lot of the pain points of JavaScript. Using the same approach as TypeScript but not stopping at types. Rust has obviously been the main inspiration for ideas. Ideally the language will feel a lot like Rust without the borrow checker.
+## Goals
+- Address pain points in JavaScript
+- Use features that JavaScript will never have
+- Maintain JavaScript ecosystem interop
 
-This is my first attempt at building a programming language. It's been a lot of fun, and I've learned a lot. Although I'm sure there's plenty of mistakes and bad design decisions. I'll try to continue working on this while I have motivation, but I'm not sure if it will ever become usable.
+## Progress
+1. Parsing, checking, and generating
+    - ✓ | Basic expressions
+    - ✓ | Let, fn, assign statements
+    - ✓ | Arrays with destructuring
+    - ✓ | Syntax for ranges
+    - ✓ | If statements & expressions
+    - ✗ | Loops
+    - ✗ | Structs
+    - ✗ | Enums
+    - ✗ | Pattern matching
+    - ✗ | Impl statements
+2. ✗ | Parser rewrite
+3. ✗ | Good error messages
+4. ✗ | Decide on a macro system
+5. ✗ | Lowering and optimizations
+6. ✗ | Figure out CLI, standard library, & package manager details
 
-### Architecture Overview
-file.rus > Tokens > AST > Semantic checks > Transformer > Generator > file.res > Rescript Compiler > file.js
+## Example
+Code will look a lot like rust with a garbage collector.
+```rs
+fn fib(n: num): num {
+    match n {
+        0 => 1,
+        1 => 1,
+        _ => fib(n-1) + fib(n-2),
+    }
+}
+```
 
-### Changes in rewrite
-Error recovery, error handing, and error messages.
+## Main Inspirations
+- [Rust](https://play.rust-lang.org/)
+- [ReScript](https://rescript-lang.org/try)
