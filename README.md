@@ -26,7 +26,7 @@ Building a language while learning at the same time. JScript transpiles to JavaS
 
 ## Example
 Code will look a lot like rust with a garbage collector.
-```rus
+```rs
 fn fib(n: num): num {
     match n {
         0 => 1,
