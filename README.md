@@ -13,7 +13,7 @@ Building a language while learning at the same time. JScript transpiles to JavaS
     - ✓ | Arrays with destructuring
     - ✓ | Syntax for ranges
     - ✓ | If statements & expressions
-    - ✗ | Loops
+    - ✓ | For Loops
     - ✗ | Structs
     - ✗ | Enums
     - ✗ | Pattern matching
