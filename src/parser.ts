@@ -92,7 +92,7 @@
 *     .value = string { return this.literal.slice(1, -1); }
 *     .type = string { return 'str'; }
 * BoolExpr := literal='true|false' pos=@
-*     .value = string { return this.literal === 'true'; }
+*     .value = boolean { return this.literal === 'true'; }
 *     .type = string { return 'bool' }
 * IdentExpr := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_ pos=@
 *     .value = unknown { return; }
@@ -490,12 +490,12 @@ export class BoolExpr {
     public kind: ASTKinds.BoolExpr = ASTKinds.BoolExpr;
     public literal: string;
     public pos: PosInfo;
-    public value: string;
+    public value: boolean;
     public type: string;
     constructor(literal: string, pos: PosInfo){
         this.literal = literal;
         this.pos = pos;
-        this.value = ((): string => {
+        this.value = ((): boolean => {
         return this.literal === 'true';
         })();
         this.type = ((): string => {

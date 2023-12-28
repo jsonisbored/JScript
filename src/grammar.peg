@@ -95,7 +95,7 @@ StringExpr := _ literal='".*"'_ pos=@
     .value = string { return this.literal.slice(1, -1); }
     .type = string { return 'str'; }
 BoolExpr := literal='true|false' pos=@
-    .value = string { return this.literal === 'true'; }
+    .value = boolean { return this.literal === 'true'; }
     .type = string { return 'bool' }
 IdentExpr := _ literal='[a-zA-Z_][a-zA-Z0-9_]*'_ pos=@
     .value = unknown { return; }
